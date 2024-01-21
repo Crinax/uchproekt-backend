@@ -1026,6 +1026,8 @@ dependencies = [
 name = "entity"
 version = "0.1.0"
 dependencies = [
+ "rust_decimal",
+ "rust_decimal_macros",
  "sea-orm",
 ]
 
@@ -2341,6 +2343,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "rust_decimal_macros"
+version = "1.33.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2e43721f4ef7060ebc2c3ede757733209564ca8207f47674181bcd425dd76945"
+dependencies = [
+ "quote",
+ "rust_decimal",
+]
+
+[[package]]
 name = "rustc-demangle"
 version = "0.1.23"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3286,6 +3298,8 @@ dependencies = [
  "log",
  "migration",
  "redis",
+ "rust_decimal",
+ "rust_decimal_macros",
  "sea-orm",
  "serde",
 ]

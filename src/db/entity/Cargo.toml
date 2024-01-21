@@ -5,4 +5,6 @@ edition = "2021"
 publish = false
 
 [dependencies]
-sea-orm = { version = "^0.12.11", features = ["sqlx-postgres", "runtime-tokio-native-tls", "macros", "with-chrono"] }
+sea-orm = { version = "^0.12.11", features = ["sqlx-postgres", "runtime-tokio-native-tls", "macros", "with-chrono", "with-rust_decimal"] }
+rust_decimal = "1.33.1"
+rust_decimal_macros = "1.33.1"
