@@ -3,6 +3,7 @@ mod api;
 mod state;
 mod cache;
 mod db;
+mod services;
 
 use std::sync::Arc;
 
@@ -14,6 +15,9 @@ use cache::Cache;
 use config::Config;
 use env_logger::Env;
 use actix_cors::Cors;
+use sea_orm::{ConnectOptions, Database};
+
+use crate::{db::DbUrlProvider, services::product::ProductService};
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -22,9 +26,16 @@ async fn main() -> std::io::Result<()> {
 
     let config = Arc::new(Config::default());
     let cache = Cache::new(config.redis_url()).expect("Redis instance error");
+    let mut connection_options = ConnectOptions::new(config.db_url());
+
+    connection_options.sqlx_logging(true)
+        .sqlx_logging_level(log::LevelFilter::Info);
+
+    let db = Database::connect(connection_options).await.expect("Db instance error");
 
     let config_data = web::Data::new(config.clone());
     let cache_data = web::Data::new(cache);
+    let product_service = web::Data::new(ProductService::new(db.clone()));
 
     let json_cfg = web::JsonConfig::default()
         .limit(4096)
@@ -54,6 +65,7 @@ async fn main() -> std::io::Result<()> {
             .app_data(json_cfg.clone())
             .app_data(config_data.clone())
             .app_data(cache_data.clone())
+            .app_data(product_service.clone())
             .wrap(Logger::default())
             .service(web::scope("/api").configure(api::configure()))
     })

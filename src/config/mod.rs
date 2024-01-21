@@ -1,5 +1,7 @@
 use std::env;
 
+use crate::db::DbUrlProvider;
+
 pub struct Config {
     db_url: String,
     host: String,
@@ -23,11 +25,11 @@ impl Config {
     }
 }
 
-// impl DbUrlProvider for Config {
-//     fn db_url(&self) -> &str {
-//         &self.db_url
-//     }
-// }
+impl DbUrlProvider for Config {
+    fn db_url(&self) -> &str {
+        &self.db_url
+    }
+}
 //
 // impl SaltProvider for Config {
 //     fn salt(&self) -> &[u8] {
