@@ -13,3 +13,9 @@ env_logger = "0.11.0"
 log = "0.4.20"
 redis = { version = "0.24.0", features = ["r2d2", "ahash"] }
 serde = { version = "1.0.195", features = ["derive"] }
+sea-orm = { version = "^0.12.11", features = ["sqlx-postgres", "runtime-tokio-native-tls", "macros", "with-chrono"] }
+entity = { path = "./src/db/entity" }
+migration = { path = "./src/db/migration" }
+
+[workspace]
+members = [".", "./src/db/entity", "./src/db/migration"]

@@ -2,6 +2,7 @@ mod config;
 mod api;
 mod state;
 mod cache;
+mod db;
 
 use std::sync::Arc;
 
