@@ -12,7 +12,6 @@ use actix_web::{error, middleware::Logger, web, App, HttpServer, http::header};
 use api::errors::invalid_data;
 use cache::Cache;
 use config::Config;
-use state::AppState;
 use env_logger::Env;
 use actix_cors::Cors;
 
@@ -24,10 +23,8 @@ async fn main() -> std::io::Result<()> {
     let config = Arc::new(Config::default());
     let cache = Cache::new(config.redis_url()).expect("Redis instance error");
 
-    let data = web::Data::new(AppState::new(
-        config.clone(),
-        cache,
-    ));
+    let config_data = web::Data::new(config.clone());
+    let cache_data = web::Data::new(cache);
 
     let json_cfg = web::JsonConfig::default()
         .limit(4096)
@@ -55,8 +52,10 @@ async fn main() -> std::io::Result<()> {
         App::new()
             .wrap(cors)
             .app_data(json_cfg.clone())
-            .app_data(data.clone())
+            .app_data(config_data.clone())
+            .app_data(cache_data.clone())
             .wrap(Logger::default())
+            .service(web::scope("/api").configure(api::configure()))
     })
     .bind((config.host(), config.port()))?
     .run()
