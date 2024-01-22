@@ -15,6 +15,7 @@ use cache::Cache;
 use config::Config;
 use env_logger::Env;
 use actix_cors::Cors;
+use migration::{Migrator, MigratorTrait};
 use sea_orm::{ConnectOptions, Database};
 
 use crate::{db::DbUrlProvider, services::product::ProductService};
@@ -36,6 +37,10 @@ async fn main() -> std::io::Result<()> {
     let config_data = web::Data::new(config.clone());
     let cache_data = web::Data::new(cache);
     let product_service = web::Data::new(ProductService::new(db.clone()));
+
+    log::info!("Running migrations...");
+    Migrator::up(&db, None).await.expect("Error running migrations");
+    log::info!("Migrations successfully applied!");
 
     let json_cfg = web::JsonConfig::default()
         .limit(4096)
