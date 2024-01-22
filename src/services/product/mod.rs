@@ -1,4 +1,4 @@
-use sea_orm::{DatabaseConnection, DbErr, EntityTrait};
+use sea_orm::{DatabaseConnection, EntityTrait};
 
 use entity::product::Entity as Product;
 use serde::Serialize;
@@ -19,6 +19,7 @@ pub struct ProductSerializable {
     price: rust_decimal::Decimal,
     article: String,
     description: String,
+    photo: String,
 }
 
 impl ProductService {
@@ -35,7 +36,8 @@ impl ProductService {
                         name: model.name.clone(),
                         price: model.price,
                         article: model.article.clone(),
-                        description: model.description.clone()
+                        description: model.description.clone(),
+                        photo: model.photo.clone()
                     }
                 )
                 .collect::<Vec<ProductSerializable>>()
