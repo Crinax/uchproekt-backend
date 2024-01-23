@@ -18,6 +18,7 @@ rust_decimal = "1.33.1"
 entity = { path = "./src/db/entity" }
 migration = { path = "./src/db/migration" }
 rust_decimal_macros = "1.33.1"
+rust-argon2 = { version = "2.0.0", features = ["serde"] }
 
 [workspace]
 members = [".", "./src/db/entity", "./src/db/migration"]
