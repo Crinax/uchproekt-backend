@@ -3,6 +3,7 @@ pub use sea_orm_migration::prelude::*;
 mod m20220101_000001_create_table;
 mod m20240122_233344_add_photo_to_product;
 mod m20240123_231042_add_admins_table;
+mod m20240124_224933_add_service_table;
 
 pub struct Migrator;
 
@@ -13,6 +14,7 @@ impl MigratorTrait for Migrator {
             Box::new(m20220101_000001_create_table::Migration),
             Box::new(m20240122_233344_add_photo_to_product::Migration),
             Box::new(m20240123_231042_add_admins_table::Migration),
+            Box::new(m20240124_224933_add_service_table::Migration),
         ]
     }
 }

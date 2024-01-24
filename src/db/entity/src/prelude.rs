@@ -2,3 +2,4 @@
 
 pub use super::admin::Entity as Admin;
 pub use super::product::Entity as Product;
+pub use super::service::Entity as Service;
