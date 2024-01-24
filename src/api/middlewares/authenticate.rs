@@ -1,7 +1,11 @@
 use std::future::{ready, Ready};
 
 use actix_web::{
-    body::EitherBody, dev::{Service, ServiceRequest, ServiceResponse, Transform}, http::header, web::Data, HttpMessage, HttpRequest
+    body::EitherBody,
+    dev::{Service, ServiceRequest, ServiceResponse, Transform},
+    http::header,
+    web::Data,
+    HttpMessage, HttpRequest,
 };
 
 use crate::services::auth::{AuthService, SecretsProvider};

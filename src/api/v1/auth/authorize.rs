@@ -1,14 +1,31 @@
-use actix_web::{cookie::{time::{ext::NumericalDuration, OffsetDateTime}, Cookie}, post, web::{Data, Json}, HttpResponse, Responder};
+use actix_web::{
+    cookie::{
+        time::{ext::NumericalDuration, OffsetDateTime},
+        Cookie,
+    },
+    post,
+    web::{Data, Json},
+    HttpResponse, Responder,
+};
 use validator::Validate;
 
-use crate::{api::{errors::invalid_data, v1::auth::{dto::AuthorizationDto, AuthDataResult}, JsonMessage}, cache::Cache, config::Config, services::auth::{AuthService, AuthServiceError}};
+use crate::{
+    api::{
+        errors::invalid_data,
+        v1::auth::{dto::AuthorizationDto, AuthDataResult},
+        JsonMessage,
+    },
+    cache::Cache,
+    config::Config,
+    services::auth::{AuthService, AuthServiceError},
+};
 
 #[post("")]
 pub(super) async fn authorize(
     json: Json<AuthorizationDto>,
     cache: Data<Cache>,
     auth_service: Data<AuthService>,
-    config: Data<Config>
+    config: Data<Config>,
 ) -> impl Responder {
     if json.validate().is_err() {
         return invalid_data();
@@ -18,7 +35,9 @@ pub(super) async fn authorize(
         message: "internal_error",
     });
 
-    let db_result = auth_service.authorize_user(&json.0.username, &json.0.password, config.as_ref()).await;
+    let db_result = auth_service
+        .authorize_user(&json.0.username, &json.0.password, config.as_ref())
+        .await;
 
     if let Err(db_err) = db_result {
         match db_err {
@@ -43,6 +62,6 @@ pub(super) async fn authorize(
         )
         .json(AuthDataResult {
             access_token: tokens.0,
-            expires: tokens.2
+            expires: tokens.2,
         })
 }

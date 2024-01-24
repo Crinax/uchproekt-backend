@@ -1,9 +1,27 @@
-use actix_web::{cookie::{time::{ext::NumericalDuration, OffsetDateTime}, Cookie}, post, web::Data, HttpRequest, HttpResponse, Responder};
+use actix_web::{
+    cookie::{
+        time::{ext::NumericalDuration, OffsetDateTime},
+        Cookie,
+    },
+    post,
+    web::Data,
+    HttpRequest, HttpResponse, Responder,
+};
 
-use crate::{api::{v1::auth::AuthDataResult, JsonMessage}, cache::Cache, config::Config, services::auth::{AuthService, AuthServiceError}};
+use crate::{
+    api::{v1::auth::AuthDataResult, JsonMessage},
+    cache::Cache,
+    config::Config,
+    services::auth::{AuthService, AuthServiceError},
+};
 
 #[post("refresh-tokens")]
-pub(super) async fn refresh_tokens(req: HttpRequest, cache: Data<Cache>, config: Data<Config>, auth_service: Data<AuthService>) -> impl Responder {
+pub(super) async fn refresh_tokens(
+    req: HttpRequest,
+    cache: Data<Cache>,
+    config: Data<Config>,
+    auth_service: Data<AuthService>,
+) -> impl Responder {
     let refresh_token = req.cookie("refresh_token");
     let refresh_token_not_found = HttpResponse::Unauthorized().json(JsonMessage {
         message: "refresh_token_not_found",
@@ -40,22 +58,27 @@ pub(super) async fn refresh_tokens(req: HttpRequest, cache: Data<Cache>, config:
 
     if let Err(err) = user_data {
         match err {
-            AuthServiceError::InvalidToken => return HttpResponse::BadRequest().json(JsonMessage {
-                message: "invalid_token"
-            }),
+            AuthServiceError::InvalidToken => {
+                return HttpResponse::BadRequest().json(JsonMessage {
+                    message: "invalid_token",
+                })
+            }
             _ => return internal_error,
         }
     }
 
     let user_data = user_data.unwrap();
-    let service_result = auth_service.refresh_tokens(&user_data, config.as_ref()).await;
+    let service_result = auth_service
+        .refresh_tokens(&user_data, config.as_ref())
+        .await;
 
     if let Err(err) = service_result {
         match err {
-            AuthServiceError::UserNotFound =>
+            AuthServiceError::UserNotFound => {
                 return HttpResponse::NotFound().json(JsonMessage {
-                    message: "user_not_found"
-                }),
+                    message: "user_not_found",
+                })
+            }
             _ => return internal_error,
         }
     }
@@ -78,6 +101,6 @@ pub(super) async fn refresh_tokens(req: HttpRequest, cache: Data<Cache>, config:
         )
         .json(AuthDataResult {
             access_token: tokens.0,
-            expires: tokens.2 * 1000
+            expires: tokens.2 * 1000,
         })
 }

@@ -1,6 +1,6 @@
 pub mod errors;
-mod v1;
 mod middlewares;
+mod v1;
 
 use actix_web::web::{self, Data};
 use serde::Serialize;

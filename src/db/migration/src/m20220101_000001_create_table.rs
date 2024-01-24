@@ -41,5 +41,5 @@ enum Product {
     Name,
     Price,
     Article,
-    Description
+    Description,
 }

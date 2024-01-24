@@ -1,4 +1,12 @@
-use actix_web::{cookie::{time::{ext::NumericalDuration, OffsetDateTime}, Cookie}, post, web::Data, HttpRequest, HttpResponse, Responder};
+use actix_web::{
+    cookie::{
+        time::{ext::NumericalDuration, OffsetDateTime},
+        Cookie,
+    },
+    post,
+    web::Data,
+    HttpRequest, HttpResponse, Responder,
+};
 
 use crate::{api::JsonMessage, cache::Cache};
 
@@ -7,10 +15,9 @@ pub(super) async fn logout(req: HttpRequest, cache: Data<Cache>) -> impl Respond
     let refresh_token = req.cookie("refresh_token");
 
     if refresh_token.is_none() {
-        return HttpResponse::Ok()
-            .json(JsonMessage {
-                message: "already_removed",
-            });
+        return HttpResponse::Ok().json(JsonMessage {
+            message: "already_removed",
+        });
     }
 
     let refresh_token = refresh_token.unwrap().to_string();
@@ -26,7 +33,5 @@ pub(super) async fn logout(req: HttpRequest, cache: Data<Cache>) -> impl Respond
                 .expires(expires_time.unwrap_or(OffsetDateTime::now_utc() - 30.days()))
                 .finish(),
         )
-        .json(JsonMessage {
-            message: "ok",
-        })
+        .json(JsonMessage { message: "ok" })
 }

@@ -9,7 +9,7 @@ pub struct ProductService {
 
 #[derive(Copy, Clone, Debug)]
 pub enum ProductServiceErr {
-    Internal
+    Internal,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -28,20 +28,22 @@ impl ProductService {
     }
 
     pub async fn all(&self) -> Result<Vec<ProductSerializable>, ProductServiceErr> {
-        Product::find().all(&self.db).await
-            .map(|models|
-                models.iter().map(|model|
-                    ProductSerializable {
+        Product::find()
+            .all(&self.db)
+            .await
+            .map(|models| {
+                models
+                    .iter()
+                    .map(|model| ProductSerializable {
                         id: model.id,
                         name: model.name.clone(),
                         price: model.price,
                         article: model.article.clone(),
                         description: model.description.clone(),
-                        photo: model.photo.clone()
-                    }
-                )
-                .collect::<Vec<ProductSerializable>>()
-            )
+                        photo: model.photo.clone(),
+                    })
+                    .collect::<Vec<ProductSerializable>>()
+            })
             .map_err(|_| ProductServiceErr::Internal)
     }
 }

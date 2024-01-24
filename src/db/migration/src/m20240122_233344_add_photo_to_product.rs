@@ -14,13 +14,13 @@ impl MigrationTrait for Migration {
                         ColumnDef::new(Product::Photo)
                             .string()
                             .not_null()
-                            .default("")
+                            .default(""),
                     )
                     .modify_column(
                         ColumnDef::new(Product::Description)
                             .string()
                             .not_null()
-                            .default("")
+                            .default(""),
                     )
                     .to_owned(),
             )
@@ -32,12 +32,8 @@ impl MigrationTrait for Migration {
             .alter_table(
                 Table::alter()
                     .drop_column(Product::Photo)
-                    .modify_column(
-                        ColumnDef::new(Product::Description)
-                            .string()
-                            .not_null()
-                    )
-                    .to_owned()
+                    .modify_column(ColumnDef::new(Product::Description).string().not_null())
+                    .to_owned(),
             )
             .await
     }
@@ -47,5 +43,5 @@ impl MigrationTrait for Migration {
 enum Product {
     Table,
     Description,
-    Photo
+    Photo,
 }

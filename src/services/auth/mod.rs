@@ -1,13 +1,9 @@
-use sea_orm::{entity::*, query::*, DatabaseConnection, EntityTrait};
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
+use sea_orm::{entity::*, query::*, DatabaseConnection, EntityTrait};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use entity::admin::{
-    self,
-    Model as AdminModel,
-    Entity as Admin
-};
+use entity::admin::{self, Entity as Admin, Model as AdminModel};
 
 #[derive(Debug)]
 pub enum AuthServiceError {
@@ -37,7 +33,7 @@ struct JwtRefreshData {
 }
 
 pub struct AuthService {
-    db: DatabaseConnection
+    db: DatabaseConnection,
 }
 
 pub trait SaltProvider {
@@ -71,15 +67,15 @@ impl AuthService {
             &DecodingKey::from_secret(secrets_provider.access_secret()),
             &Validation::default(),
         )
-            .map(|jwt| jwt.claims)
-            .map_err(|err| {
-                log::error!("{}", err);
+        .map(|jwt| jwt.claims)
+        .map_err(|err| {
+            log::error!("{}", err);
 
-                match err.kind() {
-                    jsonwebtoken::errors::ErrorKind::ExpiredSignature => AuthServiceError::TokenExpired,
-                    _ => AuthServiceError::InvalidToken,
-                }
-            })
+            match err.kind() {
+                jsonwebtoken::errors::ErrorKind::ExpiredSignature => AuthServiceError::TokenExpired,
+                _ => AuthServiceError::InvalidToken,
+            }
+        })
     }
 
     pub async fn refresh_tokens(
@@ -91,13 +87,9 @@ impl AuthService {
             .one(&self.db)
             .await
             .map_err(|_| AuthServiceError::InternalError)?
-            .ok_or(AuthServiceError::UserNotFound)?; 
+            .ok_or(AuthServiceError::UserNotFound)?;
 
-        AuthService::generate_tokens(
-            user.id,
-            &user.username,
-            secrets_provider,
-        )
+        AuthService::generate_tokens(user.id, &user.username, secrets_provider)
     }
 
     pub async fn authorize_user<T>(
@@ -123,18 +115,11 @@ impl AuthService {
             return Err(AuthServiceError::InvalidPassword);
         }
 
-        Self::generate_tokens(
-            user.id,
-            &user.username,
-            config,
-        )
-            .map_err(|err| match err {
-                AuthServiceError::AccessTokenGeneration => AuthServiceError::AccessTokenGeneration,
-                AuthServiceError::RefreshTokenGeneration => {
-                    AuthServiceError::RefreshTokenGeneration
-                }
-                _ => AuthServiceError::InternalError,
-            })
+        Self::generate_tokens(user.id, &user.username, config).map_err(|err| match err {
+            AuthServiceError::AccessTokenGeneration => AuthServiceError::AccessTokenGeneration,
+            AuthServiceError::RefreshTokenGeneration => AuthServiceError::RefreshTokenGeneration,
+            _ => AuthServiceError::InternalError,
+        })
     }
 
     fn generate_tokens(
@@ -156,14 +141,14 @@ impl AuthService {
             &access_token_data,
             &EncodingKey::from_secret(secrets_provider.access_secret()),
         )
-            .map_err(|_| AuthServiceError::AccessTokenGeneration)?;
+        .map_err(|_| AuthServiceError::AccessTokenGeneration)?;
 
         let refresh_token = encode(
             &Header::default(),
             &refresh_token_data,
             &EncodingKey::from_secret(secrets_provider.refresh_secret()),
         )
-            .map_err(|_| AuthServiceError::RefreshTokenGeneration)?;
+        .map_err(|_| AuthServiceError::RefreshTokenGeneration)?;
 
         Ok((access_token, refresh_token, exp, refresh_exp))
     }
