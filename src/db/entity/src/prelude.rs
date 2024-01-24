@@ -3,5 +3,6 @@
 pub use super::admin::Entity as Admin;
 pub use super::category::Entity as Category;
 pub use super::field::Entity as Field;
+pub use super::order::Entity as Order;
 pub use super::product::Entity as Product;
 pub use super::service::Entity as Service;

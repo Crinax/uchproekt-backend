@@ -5,6 +5,7 @@ pub mod prelude;
 pub mod admin;
 pub mod category;
 pub mod field;
+pub mod order;
 pub mod product;
 pub mod sea_orm_active_enums;
 pub mod service;
