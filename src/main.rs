@@ -18,14 +18,16 @@ use actix_cors::Cors;
 use migration::{Migrator, MigratorTrait};
 use sea_orm::{ConnectOptions, Database};
 
-use crate::{db::DbUrlProvider, services::product::ProductService};
+use crate::{db::DbUrlProvider, services::{auth::AuthService, product::ProductService}};
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     dotenv().ok();
     env_logger::init_from_env(Env::default().default_filter_or("info"));
 
-    let config = Arc::new(Config::default());
+    let config = web::Data::new(Config::default());
+    let host = config.host().to_owned();
+    let port = config.port();
     let cache = Cache::new(config.redis_url()).expect("Redis instance error");
     let mut connection_options = ConnectOptions::new(config.db_url());
 
@@ -34,9 +36,9 @@ async fn main() -> std::io::Result<()> {
 
     let db = Database::connect(connection_options).await.expect("Db instance error");
 
-    let config_data = web::Data::new(config.clone());
     let cache_data = web::Data::new(cache);
     let product_service = web::Data::new(ProductService::new(db.clone()));
+    let auth_service = web::Data::new(AuthService::new(db.clone()));
 
     log::info!("Running migrations...");
     Migrator::up(&db, None).await.expect("Error running migrations");
@@ -68,13 +70,14 @@ async fn main() -> std::io::Result<()> {
         App::new()
             .wrap(cors)
             .app_data(json_cfg.clone())
-            .app_data(config_data.clone())
+            .app_data(config.clone())
             .app_data(cache_data.clone())
             .app_data(product_service.clone())
+            .app_data(auth_service.clone())
             .wrap(Logger::default())
-            .service(web::scope("/api").configure(api::configure()))
+            .service(web::scope("/api").configure(api::configure(config.clone())))
     })
-    .bind((config.host(), config.port()))?
+    .bind((host, port))?
     .run()
     .await
 }

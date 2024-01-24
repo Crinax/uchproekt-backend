@@ -1,16 +1,19 @@
 pub mod errors;
 mod v1;
+mod middlewares;
 
-use actix_web::web;
+use actix_web::web::{self, Data};
 use serde::Serialize;
+
+use crate::config::Config;
 
 #[derive(Serialize)]
 pub struct JsonMessage<'a> {
     pub message: &'a str,
 }
 
-pub(super) fn configure() -> impl Fn(&mut web::ServiceConfig) {
+pub(super) fn configure(config: Data<Config>) -> impl Fn(&mut web::ServiceConfig) {
     move |cfg| {
-        cfg.service(web::scope("/v1").configure(v1::configure()));
+        cfg.service(web::scope("/v1").configure(v1::configure(config.clone())));
     }
 }

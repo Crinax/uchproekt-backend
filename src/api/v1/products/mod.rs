@@ -1,9 +1,17 @@
 mod get_products;
+mod delete_products;
 
-use actix_web::web;
+use actix_web::web::{self, Data};
 
-pub(super) fn configure() -> impl Fn(&mut web::ServiceConfig) {
+use crate::{api::middlewares::authenticate::JwtAuth, config::Config};
+
+pub(super) fn configure(config: Data<Config>) -> impl Fn(&mut web::ServiceConfig) {
     move |cfg| {
-        cfg.service(get_products::get_products);
+        cfg.service(get_products::get_products)
+            .service(
+                web::scope("")
+                    .service(delete_products::delete_products)
+                    .wrap(JwtAuth::new(config.clone()))
+            );
     }
 }

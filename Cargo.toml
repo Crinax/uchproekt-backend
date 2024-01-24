@@ -19,6 +19,12 @@ entity = { path = "./src/db/entity" }
 migration = { path = "./src/db/migration" }
 rust_decimal_macros = "1.33.1"
 rust-argon2 = { version = "2.0.0", features = ["serde"] }
+futures-util = { version = "0.3.29", features = ["std"] }
+jsonwebtoken = { version = "9.1.0", default-features = false }
+serde_json = "1.0.107"
+validator = { version = "0.12", features = ["derive"] }
+uuid = { version = "1.4.1", features = ["serde", "v4"] }
+chrono = { version = "0.4.31", features = ["serde"] }
 
 [workspace]
 members = [".", "./src/db/entity", "./src/db/migration"]

@@ -1,6 +1,7 @@
 use std::env;
 
 use crate::db::DbUrlProvider;
+use crate::services::auth::{SaltProvider, SecretsProvider};
 
 pub struct Config {
     db_url: String,
@@ -30,22 +31,22 @@ impl DbUrlProvider for Config {
         &self.db_url
     }
 }
-//
-// impl SaltProvider for Config {
-//     fn salt(&self) -> &[u8] {
-//         self.salt.as_bytes()
-//     }
-// }
-//
-// impl SecretsProvider for Config {
-//     fn access_secret(&self) -> &[u8] {
-//         self.jwt_secret_access.as_bytes()
-//     }
-//
-//     fn refresh_secret(&self) -> &[u8] {
-//         self.jwt_secret_refresh.as_bytes()
-//     }
-// }
+
+impl SaltProvider for Config {
+    fn salt(&self) -> &[u8] {
+        self.salt.as_bytes()
+    }
+}
+
+impl SecretsProvider for Config {
+    fn access_secret(&self) -> &[u8] {
+        self.jwt_secret_access.as_bytes()
+    }
+
+    fn refresh_secret(&self) -> &[u8] {
+        self.jwt_secret_refresh.as_bytes()
+    }
+}
 
 impl Default for Config {
     fn default() -> Self {
