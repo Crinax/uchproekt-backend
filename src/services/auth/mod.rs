@@ -1,7 +1,6 @@
 use sea_orm::{entity::*, query::*, DatabaseConnection, EntityTrait};
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
 use serde::{Deserialize, Serialize};
-use argon2::{self, Config};
 use uuid::Uuid;
 
 use entity::admin::{
@@ -12,7 +11,7 @@ use entity::admin::{
 
 #[derive(Debug)]
 pub enum AuthServiceError {
-    HashPassword,
+    // HashPassword,
     AccessTokenGeneration,
     RefreshTokenGeneration,
     InvalidPassword,
@@ -55,13 +54,13 @@ impl AuthService {
         Self { db }
     }
 
-    pub fn hash_password(
-        password: &[u8],
-        salt_provider: &impl SaltProvider,
-    ) -> Result<String, AuthServiceError> {
-        argon2::hash_encoded(password, salt_provider.salt(), &Config::rfc9106_low_mem())
-            .map_err(|_| AuthServiceError::HashPassword)
-    }
+    // pub fn hash_password(
+    //     password: &[u8],
+    //     salt_provider: &impl SaltProvider,
+    // ) -> Result<String, AuthServiceError> {
+    //     argon2::hash_encoded(password, salt_provider.salt(), &Config::rfc9106_low_mem())
+    //         .map_err(|_| AuthServiceError::HashPassword)
+    // }
 
     pub fn validate_token(
         access_token: &str,

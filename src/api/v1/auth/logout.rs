@@ -19,7 +19,7 @@ pub(super) async fn logout(req: HttpRequest, cache: Data<Cache>) -> impl Respond
 
     HttpResponse::Ok()
         .cookie(
-            Cookie::build("refresh_token", &refresh_token)
+            Cookie::build("refresh_token", refresh_token)
                 .secure(true)
                 .http_only(true)
                 .path("/api/v1/auth")

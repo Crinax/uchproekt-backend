@@ -31,13 +31,7 @@ macro_rules! need_authorization {
 }
 
 pub fn extract_auth_token(req: &HttpRequest) -> Option<&str> {
-    let auth_header = req.headers().get(header::AUTHORIZATION);
-
-    if auth_header.is_none() {
-        return None;
-    }
-
-    let auth_header = auth_header.unwrap();
+    let auth_header = req.headers().get(header::AUTHORIZATION)?;
 
     if auth_header.is_empty() {
         return None;
@@ -81,7 +75,7 @@ where
     actix_web::dev::forward_ready!(service);
 
     fn call(&self, req: ServiceRequest) -> Self::Future {
-        let token = extract_auth_token(&req.request());
+        let token = extract_auth_token(req.request());
 
         if token.is_none() {
             need_authorization!(req);

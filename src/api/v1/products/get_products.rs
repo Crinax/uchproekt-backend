@@ -2,7 +2,7 @@ use crate::{api::JsonMessage, services::product::ProductService};
 use actix_web::{get, Responder, HttpResponse, web::Data};
 
 #[get("")]
-pub(self) async fn get_products(products_service: Data<ProductService>) -> impl Responder {
+pub(super) async fn get_products(products_service: Data<ProductService>) -> impl Responder {
     let products = products_service.all().await;
 
     if products.is_err() {

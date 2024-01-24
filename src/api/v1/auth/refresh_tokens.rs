@@ -18,7 +18,7 @@ pub(super) async fn refresh_tokens(req: HttpRequest, cache: Data<Cache>, config:
 
     let refresh_token = refresh_token.unwrap();
     let refresh_token = refresh_token.value();
-    let access_token = cache.get_pair(&refresh_token);
+    let access_token = cache.get_pair(refresh_token);
 
     if access_token.is_err() {
         return internal_error;
@@ -62,7 +62,7 @@ pub(super) async fn refresh_tokens(req: HttpRequest, cache: Data<Cache>, config:
 
     let tokens = service_result.unwrap();
 
-    let _ = cache.remove(&refresh_token);
+    let _ = cache.remove(refresh_token);
     let _ = cache.add_pair(&tokens.1, &access_token, tokens.3);
 
     let expires_time = OffsetDateTime::from_unix_timestamp(tokens.3 as i64 * 1000);

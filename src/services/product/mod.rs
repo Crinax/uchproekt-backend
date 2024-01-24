@@ -42,8 +42,6 @@ impl ProductService {
                 )
                 .collect::<Vec<ProductSerializable>>()
             )
-            .map_err(|err| match err {
-                _ => ProductServiceErr::Internal
-            })
+            .map_err(|_| ProductServiceErr::Internal)
     }
 }

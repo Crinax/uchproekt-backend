@@ -1,11 +1,8 @@
 mod config;
 mod api;
-mod state;
 mod cache;
 mod db;
 mod services;
-
-use std::sync::Arc;
 
 use dotenvy::dotenv;
 
