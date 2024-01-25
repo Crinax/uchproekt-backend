@@ -15,7 +15,7 @@ pub struct Model {
 pub enum Relation {
     #[sea_orm(
         belongs_to = "super::order::Entity",
-        from = "Column::ProductId",
+        from = "Column::OrderId",
         to = "super::order::Column::Id",
         on_update = "NoAction",
         on_delete = "Cascade"

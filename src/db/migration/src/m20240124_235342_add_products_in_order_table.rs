@@ -30,7 +30,7 @@ impl MigrationTrait for Migration {
                     .foreign_key(
                         ForeignKey::create()
                             .name("fk_products_in_order_order")
-                            .from(ProductsInOrder::Table, ProductsInOrder::ProductId)    
+                            .from(ProductsInOrder::Table, ProductsInOrder::OrderId)    
                             .to(Order::Table, Order::Id)
                             .on_delete(ForeignKeyAction::Cascade)
                     )
