@@ -21,6 +21,14 @@ pub enum Relation {
         on_delete = "Cascade"
     )]
     SelfRef,
+    #[sea_orm(has_many = "super::category_product::Entity")]
+    CategoryProduct,
+}
+
+impl Related<super::category_product::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::CategoryProduct.def()
+    }
 }
 
 impl ActiveModelBehavior for ActiveModel {}

@@ -4,6 +4,7 @@ pub mod prelude;
 
 pub mod admin;
 pub mod category;
+pub mod category_product;
 pub mod field;
 pub mod order;
 pub mod product;

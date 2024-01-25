@@ -9,6 +9,7 @@ mod m20240124_232016_add_field_table;
 mod m20240124_232904_add_category_table;
 mod m20240124_234641_add_order_table;
 mod m20240124_235342_add_products_in_order_table;
+mod m20240125_000958_add_category_product_table;
 
 pub struct Migrator;
 
@@ -25,6 +26,7 @@ impl MigratorTrait for Migrator {
             Box::new(m20240124_232904_add_category_table::Migration),
             Box::new(m20240124_234641_add_order_table::Migration),
             Box::new(m20240124_235342_add_products_in_order_table::Migration),
+            Box::new(m20240125_000958_add_category_product_table::Migration),
         ]
     }
 }
