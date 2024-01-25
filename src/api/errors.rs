@@ -15,4 +15,10 @@ impl ApiError {
             message: "internal_error"
         })
     }
+
+    pub fn not_found() -> HttpResponse {
+        HttpResponse::NotFound().json(JsonMessage {
+            message: "not_found"
+        })
+    }
 }

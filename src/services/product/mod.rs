@@ -10,6 +10,7 @@ pub struct ProductService {
 #[derive(Copy, Clone, Debug)]
 pub enum ProductServiceErr {
     Internal,
+    NotFound
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -43,6 +44,19 @@ impl From<Vec<product::Model>> for ProductIdx {
     }
 }
 
+impl From<product::Model> for ProductSerializable {
+    fn from(model: product::Model) -> Self {
+        ProductSerializable {
+            id: model.id,
+            name: model.name,
+            price: model.price,
+            article: model.article,
+            description: model.description,
+            photo: model.photo,
+        }
+    }
+}
+
 impl ProductService {
     pub fn new(db: DatabaseConnection) -> Self {
         Self { db }
@@ -54,18 +68,20 @@ impl ProductService {
             .await
             .map(|models| {
                 models
-                    .iter()
-                    .map(|model| ProductSerializable {
-                        id: model.id,
-                        name: model.name.clone(),
-                        price: model.price,
-                        article: model.article.clone(),
-                        description: model.description.clone(),
-                        photo: model.photo.clone(),
-                    })
+                    .into_iter()
+                    .map(Into::into)
                     .collect::<Vec<ProductSerializable>>()
             })
             .map_err(|_| ProductServiceErr::Internal)
+    }
+
+    pub async fn get(&self, id: u32) -> Result<ProductSerializable, ProductServiceErr> {
+        Product::find_by_id(id as i32)
+            .one(&self.db)
+            .await
+            .map_err(|_| ProductServiceErr::Internal)?
+            .ok_or(ProductServiceErr::NotFound)
+            .map(Into::into)
     }
 
     pub async fn delete(&self, idx: &[u32]) -> Result<ProductIdx, ProductServiceErr> {
