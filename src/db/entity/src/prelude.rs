@@ -5,4 +5,5 @@ pub use super::category::Entity as Category;
 pub use super::field::Entity as Field;
 pub use super::order::Entity as Order;
 pub use super::product::Entity as Product;
+pub use super::products_in_order::Entity as ProductsInOrder;
 pub use super::service::Entity as Service;
