@@ -9,7 +9,7 @@ use actix_web::{
 };
 
 use crate::{
-    api::{v1::auth::AuthDataResult, JsonMessage},
+    api::{errors::ApiError, v1::auth::AuthDataResult, JsonMessage},
     cache::Cache,
     config::Config,
     services::auth::{AuthService, AuthServiceError},
@@ -26,9 +26,7 @@ pub(super) async fn refresh_tokens(
     let refresh_token_not_found = HttpResponse::Unauthorized().json(JsonMessage {
         message: "refresh_token_not_found",
     });
-    let internal_error = HttpResponse::InternalServerError().json(JsonMessage {
-        message: "internal_error",
-    });
+    let internal_error = ApiError::internal_error();
 
     if refresh_token.is_none() {
         return refresh_token_not_found;

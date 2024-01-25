@@ -1,8 +1,18 @@
 use super::JsonMessage;
 use actix_web::HttpResponse;
 
-pub fn invalid_data() -> HttpResponse {
-    HttpResponse::BadRequest().json(JsonMessage {
-        message: "invalid_data",
-    })
+pub struct ApiError;
+
+impl ApiError {
+    pub fn invalid_data() -> HttpResponse {
+        HttpResponse::BadRequest().json(JsonMessage {
+            message: "invalid_data",
+        })
+    }
+
+    pub fn internal_error() -> HttpResponse {
+        HttpResponse::InternalServerError().json(JsonMessage {
+            message: "internal_error"
+        })
+    }
 }

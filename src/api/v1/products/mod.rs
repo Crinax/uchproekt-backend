@@ -1,5 +1,6 @@
 mod delete_products;
 mod get_products;
+mod dto;
 
 use actix_web::web::{self, Data};
 

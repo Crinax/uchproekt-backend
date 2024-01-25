@@ -8,7 +8,7 @@ use dotenvy::dotenv;
 
 use actix_cors::Cors;
 use actix_web::{error, http::header, middleware::Logger, web, App, HttpServer};
-use api::errors::invalid_data;
+use api::errors::ApiError;
 use cache::Cache;
 use config::Config;
 use env_logger::Env;
@@ -53,7 +53,7 @@ async fn main() -> std::io::Result<()> {
         .limit(4096)
         .error_handler(|err, _req| {
             log::error!("{:?}", err);
-            error::InternalError::from_response(err, invalid_data()).into()
+            error::InternalError::from_response(err, ApiError::invalid_data()).into()
         });
 
     log::info!("Starting server at {}:{}", config.host(), config.port());

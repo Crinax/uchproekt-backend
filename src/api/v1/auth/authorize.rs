@@ -11,9 +11,8 @@ use validator::Validate;
 
 use crate::{
     api::{
-        errors::invalid_data,
+        errors::ApiError,
         v1::auth::{dto::AuthorizationDto, AuthDataResult},
-        JsonMessage,
     },
     cache::Cache,
     config::Config,
@@ -28,12 +27,8 @@ pub(super) async fn authorize(
     config: Data<Config>,
 ) -> impl Responder {
     if json.validate().is_err() {
-        return invalid_data();
+        return ApiError::invalid_data();
     }
-
-    let internal_error = HttpResponse::InternalServerError().json(JsonMessage {
-        message: "internal_error",
-    });
 
     let db_result = auth_service
         .authorize_user(&json.0.username, &json.0.password, config.as_ref())
@@ -41,9 +36,9 @@ pub(super) async fn authorize(
 
     if let Err(db_err) = db_result {
         match db_err {
-            AuthServiceError::UserNotFound => return invalid_data(),
-            AuthServiceError::InvalidPassword => return invalid_data(),
-            _ => return internal_error,
+            AuthServiceError::UserNotFound => return ApiError::invalid_data(),
+            AuthServiceError::InvalidPassword => return ApiError::invalid_data(),
+            _ => return ApiError::internal_error(),
         }
     }
 
