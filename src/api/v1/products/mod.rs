@@ -13,10 +13,9 @@ pub(super) fn configure(config: Data<Config>) -> impl Fn(&mut web::ServiceConfig
             .service(get_products::get_products)
             .service(get_products::get_concreate_product)
             .service(
-                web::scope("")
-                    // .service(create_product::create_product)
-                    .service(delete_products::delete_products)
-                    .wrap(JwtAuth::new(config.clone())),
+                web::resource("")
+                    .wrap(JwtAuth::new(config.clone()))
+                    .delete(delete_products::delete_products)
             );
     }
 }

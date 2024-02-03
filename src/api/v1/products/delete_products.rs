@@ -1,9 +1,8 @@
-use actix_web::{delete, web::{Data, Json}, HttpResponse, Responder};
+use actix_web::{web::{Data, Json}, HttpResponse, Responder};
 use validator::Validate;
 
 use crate::{api::{errors::ApiError, v1::products::dto::DeleteProductsDto}, services::product::ProductService};
 
-#[delete("")]
 pub(super) async fn delete_products(
     data: Json<DeleteProductsDto>,
     product_service: Data<ProductService>
