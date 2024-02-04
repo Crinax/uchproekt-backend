@@ -70,7 +70,7 @@ impl ProductService {
                 models
                     .into_iter()
                     .map(Into::into)
-                    .collect::<Vec<ProductSerializable>>()
+                    .collect()
             })
             .map_err(|_| ProductServiceErr::Internal)
     }
