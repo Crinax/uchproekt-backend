@@ -3,11 +3,13 @@ use validator::Validate;
 
 #[derive(Deserialize, Validate, Debug, Clone)]
 pub struct DeleteCategoriesDto {
-    pub products: Vec<u32>,
+    pub categories: Vec<u32>,
 }
 
 #[derive(Deserialize, Validate, Debug, Clone)]
-pub struct CreateCategory {
+pub struct CreateCategoryDto {
     #[validate(length(min = 3, max = 32))]
     pub name: String,
+
+    pub parent_id: Option<u32>
 }

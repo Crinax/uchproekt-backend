@@ -21,4 +21,10 @@ impl ApiError {
             message: "not_found"
         })
     }
+
+    pub fn conflict() -> HttpResponse {
+        HttpResponse::Conflict().json(JsonMessage {
+            message: "conflict"
+        })
+    }
 }

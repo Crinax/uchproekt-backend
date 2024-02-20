@@ -12,3 +12,14 @@ pub(super) async fn get_categories(category_service: Data<CategoryService>) -> i
 
     categories.map(|data| HttpResponse::Ok().json(data)).unwrap()
 }
+
+#[get("/tree")]
+pub(super) async fn get_tree_categories(category_service: Data<CategoryService>) -> impl Responder {
+    let categories = category_service.all_tree().await;
+
+    if categories.is_err() {
+        return ApiError::internal_error();
+    }
+
+    categories.map(|data| HttpResponse::Ok().json(data)).unwrap()
+}
