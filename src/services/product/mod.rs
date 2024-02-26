@@ -1,7 +1,5 @@
 use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter};
 
-// Test commit
-
 use entity::product::{self, Entity as Product};
 use serde::Serialize;
 
