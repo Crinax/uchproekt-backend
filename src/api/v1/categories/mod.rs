@@ -2,6 +2,7 @@ mod dto;
 mod get_categories;
 mod create_category;
 mod patch_category;
+mod delete_category;
 
 use actix_web::web::{self, Data};
 
@@ -16,6 +17,7 @@ pub(super) fn configure(config: Data<Config>) -> impl Fn(&mut web::ServiceConfig
                 web::resource("")
                     .wrap(JwtAuth::new(config.clone()))
                     .post(create_category::create_category)
+                    .delete(delete_category::delete_categories)
             )
             .service(
                 web::resource("{id}")

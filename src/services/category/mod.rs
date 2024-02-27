@@ -1,6 +1,6 @@
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
-use sea_orm::{ActiveModelTrait, DatabaseConnection, EntityTrait, Order, QueryOrder, Set};
+use sea_orm::{ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, Order, QueryFilter, QueryOrder, Set};
 use serde::Serialize;
 
 use entity::category::{self, Entity as Category};
@@ -36,6 +36,19 @@ pub struct CategoryTreeSerializable {
     id: u32,
     name: String,
     categories: Rc<RefCell<Vec<CategoryTreeSerializable>>>,
+}
+
+#[derive(Serialize, Debug, Clone)]
+pub struct CategoriesIdx {
+    idx: Vec<u32>
+}
+
+impl From<Vec<category::Model>> for CategoriesIdx {
+    fn from(value: Vec<category::Model>) -> Self {
+        Self {
+            idx: value.into_iter().map(|category| category.id as u32).collect()
+        }
+    }
 }
 
 // need to rewrite
@@ -228,5 +241,21 @@ impl CategoryService {
                     _ => CategoriesServiceErr::Internal
                 }
             })
+    }
+
+    pub async fn delete(&self, idx: &[u32]) -> Result<CategoriesIdx, CategoriesServiceErr> {
+        let values = idx.iter().map(|v| Into::<sea_orm::Value>::into(*v));
+
+        let categories = Category::find().filter(category::Column::Id.is_in(values.clone()))
+            .all(&self.db)
+            .await
+            .map_err(|_| CategoriesServiceErr::Internal)?;
+
+        Category::delete_many()
+            .filter(category::Column::Id.is_in(values))
+            .exec(&self.db)
+            .await
+            .map(|_| categories.into())
+            .map_err(|_| CategoriesServiceErr::Internal)
     }
 }
