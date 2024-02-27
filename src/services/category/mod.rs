@@ -1,9 +1,11 @@
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
-use sea_orm::{DatabaseConnection, EntityTrait, Order, QueryOrder, Set};
+use sea_orm::{ActiveModelTrait, DatabaseConnection, EntityTrait, Order, QueryOrder, Set};
 use serde::Serialize;
 
 use entity::category::{self, Entity as Category};
+
+use crate::utilities::serde_utils::Patch;
 
 pub struct CategoryService {
     db: DatabaseConnection,
@@ -90,6 +92,16 @@ impl From<category::Model> for CategorySerializable {
     }
 }
 
+impl From<category::ActiveModel> for CategorySerializable {
+    fn from(value: category::ActiveModel) -> Self {
+        Self {
+            id: value.id.unwrap() as u32,
+            name: value.name.unwrap(),
+            parent_id: value.parent_id.unwrap().map(|v| v as u32),
+        }
+    }
+}
+
 impl From<category::Model> for CategoryTreeSerializable {
     fn from(value: category::Model) -> Self {
         Self {
@@ -144,6 +156,57 @@ impl CategoryService {
             .exec(&self.db)
             .await
             .map(|model| CategoryInsertion { id: model.last_insert_id as u32 })
+            .map_err(|err| {
+                match err {
+                    sea_orm::DbErr::RecordNotInserted => CategoriesServiceErr::AlreadyExists,
+                    sea_orm::DbErr::Query(sea_orm::RuntimeErr::SqlxError(err)) => {
+                        let database_error = err.as_database_error();
+
+                        if database_error.is_none() {
+                            return CategoriesServiceErr::Internal;
+                        }
+
+                        let database_error = database_error.unwrap();
+
+                        if database_error.is_foreign_key_violation() {
+                            return CategoriesServiceErr::InvalidParentId;
+                        }
+
+                        CategoriesServiceErr::Internal
+                    }
+                    _ => CategoriesServiceErr::Internal
+                }
+            })
+    }
+
+    pub async fn update(&self, id: u32, new_name: Option<&str>, parent_id: Patch<u32>) -> Result<CategorySerializable, CategoriesServiceErr> {
+        let category = Category::find_by_id(id as i32)
+            .one(&self.db)
+            .await
+            .map_err(|_| CategoriesServiceErr::Internal)?;
+
+        if category.is_none() {
+            return Err(CategoriesServiceErr::NotFound);
+        }
+
+        let mut category: category::ActiveModel = category.unwrap().into();
+
+        if let Some(new_name) = new_name {
+            category.name = Set(new_name.to_owned());
+        }
+
+        log::info!("{parent_id:?}");
+
+        if let Patch::Null = parent_id {
+            category.parent_id = Set(None);
+        }
+
+        if let Patch::Value(parent_id) = parent_id {
+            category.parent_id = Set(Some(parent_id as i32));
+        }
+
+        category.save(&self.db).await
+            .map(Into::into)
             .map_err(|err| {
                 match err {
                     sea_orm::DbErr::RecordNotInserted => CategoriesServiceErr::AlreadyExists,

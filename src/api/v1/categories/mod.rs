@@ -1,6 +1,7 @@
 mod dto;
 mod get_categories;
 mod create_category;
+mod patch_category;
 
 use actix_web::web::{self, Data};
 
@@ -15,6 +16,11 @@ pub(super) fn configure(config: Data<Config>) -> impl Fn(&mut web::ServiceConfig
                 web::resource("")
                     .wrap(JwtAuth::new(config.clone()))
                     .post(create_category::create_category)
+            )
+            .service(
+                web::resource("{id}")
+                    .wrap(JwtAuth::new(config.clone()))
+                    .patch(patch_category::patch_category)
             );
     }
 }

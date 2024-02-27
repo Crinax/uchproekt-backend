@@ -3,6 +3,7 @@ mod cache;
 mod config;
 mod db;
 mod services;
+mod utilities;
 
 use dotenvy::dotenv;
 
