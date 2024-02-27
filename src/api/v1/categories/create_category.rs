@@ -24,6 +24,6 @@ pub(super) async fn create_category(
     }
 
     create_result
-        .map(|res| HttpResponse::Ok().json(res))
+        .map(|res| HttpResponse::Created().json(res))
         .unwrap()
 }
