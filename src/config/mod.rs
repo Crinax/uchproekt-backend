@@ -11,6 +11,7 @@ pub struct Config {
     jwt_secret_access: String,
     jwt_secret_refresh: String,
     redis_url: String,
+    upload_path: String,
 }
 
 impl Config {
@@ -72,6 +73,11 @@ impl Default for Config {
                 "notsecuresecretrefresh".to_string()
             }),
             redis_url: env::var("REDIS_URL").expect("REDIS_URL must be set"),
+            upload_path: env::var("UPLOAD_PATH").unwrap_or_else(|_| {
+                log::warn!("UPLOAD_PATH not specified. Default file path: ./uploads");
+
+                "./uploads".to_string()
+            })
         }
     }
 }
