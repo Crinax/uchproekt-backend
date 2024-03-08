@@ -1,3 +1,5 @@
+mod dto;
+
 use actix_web::web::{self, Data};
 
 use crate::{api::middlewares::authenticate::JwtAuth, config::Config};
