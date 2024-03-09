@@ -1,8 +1,6 @@
-use std::{io::Write, path::Path, sync::Arc};
+use std::path::Path;
 
-use actix_multipart::{form::{tempfile::TempFile, MultipartForm}, Multipart};
-use actix_web::web;
-use futures_util::TryStreamExt;
+use actix_multipart::form::tempfile::TempFile;
 use serde::Deserialize;
 use uuid::Uuid;
 
@@ -31,10 +29,13 @@ impl FilesService {
     where
         T: UploadPathProvider
     {
-        let first_file = files.first().ok_or(FilesServiceErr::NoFilesToUpload)?;
 
-        let filename = Arc::new(Uuid::new_v4().to_string());
-        let directory = Arc::new(config.upload_path());
+        let filename = Uuid::new_v4().to_string();
+        let directory = config.upload_path();
+        let path = Path::new(&directory).join(&filename);
+
+        let f = files.into_iter().nth(0).ok_or(FilesServiceErr::NoFilesToUpload)?;
+        let _file = f.file.persist(path).map_err(|_| FilesServiceErr::Internal)?;
 
 
         Ok(FileName { file: filename.to_string() })
