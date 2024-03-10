@@ -1,7 +1,7 @@
 use std::path::Path;
 
 use actix_multipart::form::tempfile::TempFile;
-use serde::Deserialize;
+use serde::Serialize;
 use uuid::Uuid;
 
 pub struct FilesService;
@@ -11,13 +11,13 @@ pub enum FilesServiceErr {
     NoFilesToUpload
 }
 
-#[derive(Deserialize)]
+#[derive(Serialize)]
 pub struct FileName {
     file: String,
 }
 
 pub trait UploadPathProvider {
-    fn upload_path(&self) -> String;
+    fn upload_path(&self) -> &str;
 }
 
 impl FilesService {
@@ -25,7 +25,11 @@ impl FilesService {
         Self {}
     }
 
-    pub async fn save_file<T>(files: Vec<TempFile>, config: T) -> Result<FileName, FilesServiceErr> 
+    pub async fn save_file<T>(
+        &self,
+        files: Vec<TempFile>,
+        config: &T
+    ) -> Result<FileName, FilesServiceErr> 
     where
         T: UploadPathProvider
     {

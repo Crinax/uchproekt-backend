@@ -2,6 +2,7 @@ use std::env;
 
 use crate::db::DbUrlProvider;
 use crate::services::auth::{SaltProvider, SecretsProvider};
+use crate::services::files::UploadPathProvider;
 
 pub struct Config {
     db_url: String,
@@ -46,6 +47,12 @@ impl SecretsProvider for Config {
 
     fn refresh_secret(&self) -> &[u8] {
         self.jwt_secret_refresh.as_bytes()
+    }
+}
+
+impl UploadPathProvider for Config {
+    fn upload_path(&self) -> &str {
+        &self.upload_path
     }
 }
 
