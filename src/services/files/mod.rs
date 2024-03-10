@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::{fs, path::Path};
 
 use actix_multipart::form::tempfile::TempFile;
 use serde::Serialize;
@@ -8,7 +8,9 @@ pub struct FilesService;
 
 pub enum FilesServiceErr {
     Internal,
-    NoFilesToUpload
+    NoFilesToUpload,
+    ForbiddenException,
+    MaxFileSizeExceed
 }
 
 #[derive(Serialize)]
@@ -21,6 +23,8 @@ pub trait UploadPathProvider {
 }
 
 impl FilesService {
+    const MAX_FILE_SIZE: usize = 5_242_880;
+
     pub fn new() -> Self {
         Self {}
     }
@@ -34,12 +38,27 @@ impl FilesService {
         T: UploadPathProvider
     {
 
-        let filename = Uuid::new_v4().to_string();
+        let f = files.into_iter().nth(0).ok_or(FilesServiceErr::NoFilesToUpload)?;
+
+        if f.size > FilesService::MAX_FILE_SIZE {
+            return Err(FilesServiceErr::MaxFileSizeExceed)
+        } 
+
+        let full_filename = f.file_name.ok_or(FilesServiceErr::ForbiddenException)?;
+        let ext = full_filename.split(".").last().ok_or(FilesServiceErr::ForbiddenException)?;
+
+        let filename = Uuid::new_v4().to_string() + "." + ext;
         let directory = config.upload_path();
         let path = Path::new(&directory).join(&filename);
 
-        let f = files.into_iter().nth(0).ok_or(FilesServiceErr::NoFilesToUpload)?;
-        let _file = f.file.persist(path).map_err(|_| FilesServiceErr::Internal)?;
+        log::info!("{:?}", &path);
+        log::info!("{:?}", f.file.path());
+
+        fs::copy(f.file.path(), path)
+            .map_err(|err| {
+                log::error!("{:?}", err);
+                FilesServiceErr::Internal
+            })?;
 
 
         Ok(FileName { file: filename.to_string() })

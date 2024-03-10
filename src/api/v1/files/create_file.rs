@@ -14,7 +14,9 @@ pub(super) async fn create_file(
         .await
         .map_err(|err| match err {
             FilesServiceErr::Internal => ApiError::internal_error(),
-            FilesServiceErr::NoFilesToUpload => ApiError::not_found(),
+            FilesServiceErr::NoFilesToUpload => ApiError::invalid_data(),
+            FilesServiceErr::ForbiddenException => ApiError::invalid_data(),
+            FilesServiceErr::MaxFileSizeExceed => ApiError::invalid_data(),
         })
         .map(|res| HttpResponse::Ok().json(res));
 
