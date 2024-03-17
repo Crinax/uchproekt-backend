@@ -7,6 +7,7 @@ pub mod category;
 pub mod category_product;
 pub mod field;
 pub mod field_product;
+pub mod file;
 pub mod order;
 pub mod product;
 pub mod products_in_order;
