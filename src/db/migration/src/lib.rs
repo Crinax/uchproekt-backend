@@ -12,6 +12,7 @@ mod m20240124_235342_add_products_in_order_table;
 mod m20240125_000958_add_category_product_table;
 mod m20240125_001325_add_field_product_table;
 mod m20240317_014139_add_file_table;
+mod m20240317_031542_change_product_file_type_to_uuid_and_link_with_file_table;
 
 pub struct Migrator;
 
@@ -31,6 +32,7 @@ impl MigratorTrait for Migrator {
             Box::new(m20240125_000958_add_category_product_table::Migration),
             Box::new(m20240125_001325_add_field_product_table::Migration),
             Box::new(m20240317_014139_add_file_table::Migration),
+            Box::new(m20240317_031542_change_product_file_type_to_uuid_and_link_with_file_table::Migration),
         ]
     }
 }
