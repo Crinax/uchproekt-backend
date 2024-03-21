@@ -11,7 +11,7 @@ pub struct Model {
     pub price: Decimal,
     pub article: String,
     pub description: String,
-    pub photo: String,
+    pub photo: Option<Uuid>,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
@@ -20,6 +20,14 @@ pub enum Relation {
     CategoryProduct,
     #[sea_orm(has_many = "super::field_product::Entity")]
     FieldProduct,
+    #[sea_orm(
+        belongs_to = "super::file::Entity",
+        from = "Column::Photo",
+        to = "super::file::Column::Id",
+        on_update = "NoAction",
+        on_delete = "SetNull"
+    )]
+    File,
     #[sea_orm(has_many = "super::products_in_order::Entity")]
     ProductsInOrder,
 }
@@ -33,6 +41,12 @@ impl Related<super::category_product::Entity> for Entity {
 impl Related<super::field_product::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::FieldProduct.def()
+    }
+}
+
+impl Related<super::file::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::File.def()
     }
 }
 

@@ -1,14 +1,20 @@
-use std::{fs::{self, File}, io::Read, path::Path};
+use std::{fs, io::Read, path::Path};
 
 use actix_multipart::form::tempfile::TempFile;
+use sea_orm::{DatabaseConnection, EntityTrait, Set};
 use serde::Serialize;
 use uuid::Uuid;
 
-pub struct FilesService;
+use entity::file::{self, Entity as File};
+
+pub struct FilesService {
+    db: DatabaseConnection
+}
 
 pub enum FilesServiceErr {
     Internal,
     NoFilesToUpload,
+    NotFound,
     ForbiddenFileType,
     MaxFileSizeExceed
 }
@@ -16,6 +22,14 @@ pub enum FilesServiceErr {
 #[derive(Serialize)]
 pub struct FileName {
     file: String,
+}
+
+impl From<file::Model> for FileName {
+    fn from(value: file::Model) -> Self {
+        Self {
+            file: value.id.to_string()
+        }
+    }
 }
 
 pub trait UploadPathProvider {
@@ -28,8 +42,8 @@ impl FilesService {
     const JPEG_FILE_SIGNATURE: [u8; 4] = [0xFF, 0xD8, 0xFF, 0xEE];
     const JPG_FILE_SIGNATURE: [u8; 4] = [0xFF, 0xD8, 0xFF, 0xE0];
 
-    pub fn new() -> Self {
-        Self {}
+    pub fn new(db: DatabaseConnection) -> Self {
+        Self { db }
     }
 
     fn has_valid_signature(&self, file: &mut TempFile) -> Result<bool, FilesServiceErr> {
@@ -52,6 +66,26 @@ impl FilesService {
 
     fn is_jpeg(&self, buf: &[u8]) -> bool {
         buf == &FilesService::JPEG_FILE_SIGNATURE || buf == &FilesService::JPG_FILE_SIGNATURE
+    }
+
+    pub async fn get_file<T>(&self, uid: Uuid, config: &T) -> Result<fs::File, FilesServiceErr>
+        where:
+            T: UploadPathProvider
+    {
+        let db_file = File::find_by_id(uid).one(&self.db).await
+            .map_err(|_| FilesServiceErr::Internal)?;
+
+        if db_file.is_none() {
+            return Err(FilesServiceErr::NotFound)
+        }
+
+        let db_file = db_file.unwrap();
+
+        let directory = config.upload_path();
+        let path = Path::new(&directory).join(&db_file.filename);
+
+        // TODO: доделать получение стрима файла
+        fs::(path);
     }
 
     pub async fn save_file<T>(
@@ -78,7 +112,8 @@ impl FilesService {
         let full_filename = f.file_name.ok_or(FilesServiceErr::ForbiddenFileType)?;
         let ext = full_filename.split(".").last().ok_or(FilesServiceErr::ForbiddenFileType)?;
 
-        let filename = Uuid::new_v4().to_string() + "." + ext;
+        let uuid = Uuid::new_v4();
+        let filename = format!("{uuid}.{ext}");
         let directory = config.upload_path();
         let path = Path::new(&directory).join(&filename);
 
@@ -88,7 +123,16 @@ impl FilesService {
                 FilesServiceErr::Internal
             })?;
 
+        let file_data = file::ActiveModel {
+            id: Set(uuid),
+            filename: Set(filename),
+            ..Default::default()
+        };
 
-        Ok(FileName { file: filename.to_string() })
+        File::insert(file_data)
+            .exec(&self.db)
+            .await
+            .map(|model| FileName { file: model.last_insert_id.to_string() })
+            .map_err(|_| FilesServiceErr::Internal)
     }
 }

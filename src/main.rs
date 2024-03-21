@@ -44,7 +44,7 @@ async fn main() -> std::io::Result<()> {
     let product_service = web::Data::new(ProductService::new(db.clone()));
     let auth_service = web::Data::new(AuthService::new(db.clone()));
     let category_service = web::Data::new(CategoryService::new(db.clone()));
-    let files_service = web::Data::new(FilesService::new());
+    let files_service = web::Data::new(FilesService::new(db.clone()));
 
     log::info!("Running migrations...");
     Migrator::up(&db, None)

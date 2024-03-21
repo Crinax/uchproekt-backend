@@ -2,6 +2,7 @@ use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter};
 
 use entity::product::{self, Entity as Product};
 use serde::Serialize;
+use uuid::Uuid;
 
 pub struct ProductService {
     db: DatabaseConnection,
@@ -20,7 +21,7 @@ pub struct ProductSerializable {
     price: rust_decimal::Decimal,
     article: String,
     description: String,
-    photo: String,
+    photo: Option<Uuid>,
 }
 
 #[derive(Clone, Debug, Serialize)]
