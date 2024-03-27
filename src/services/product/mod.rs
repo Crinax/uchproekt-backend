@@ -32,7 +32,7 @@ pub struct ProductIdx {
 impl From<&[u32]> for ProductIdx {
     fn from(value: &[u32]) -> Self {
         ProductIdx {
-            idx: value.into_iter().map(|v| *v).collect()
+            idx: value.to_vec()
         }
     }
 }

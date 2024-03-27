@@ -60,7 +60,7 @@ impl CategoryTreeSerializable {
         for value in categories {
             let mut child: CategoryTreeSerializable = value.clone().into();
 
-            if value.parent_id == None {
+            if value.parent_id.is_none() {
                 if id_mappings.contains_key(&value.id) {
                     child.categories = id_mappings[&value.id].categories.clone();
                 }
@@ -85,9 +85,7 @@ impl CategoryTreeSerializable {
 
                 id_mappings.insert(value.id, child.clone());
 
-                id_mappings.get(&parent_id).map(
-                    |v| v.categories.borrow_mut().push(child)
-                );
+                if let Some(v) = id_mappings.get(&parent_id) { v.categories.borrow_mut().push(child) }
             }
         }
 
@@ -154,7 +152,7 @@ impl CategoryService {
             .order_by(category::Column::Id, Order::Asc)
             .all(&self.db)
             .await
-            .map(|models| CategoryTreeSerializable::from_vec(models))
+            .map(CategoryTreeSerializable::from_vec)
             .map_err(|_| CategoriesServiceErr::Internal)
     }
 

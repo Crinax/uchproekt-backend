@@ -1,17 +1,15 @@
 use serde::{Deserialize, Deserializer};
 
 #[derive(Debug, Clone, Copy)]
+#[derive(Default)]
 pub enum Patch<T> {
+    #[default]
     Missing,
     Null,
     Value(T),
 }
 
-impl<T> Default for Patch<T> {
-    fn default() -> Self {
-        Patch::Missing
-    }
-}
+
 
 impl<T> From<Option<T>> for Patch<T> {
     fn from(opt: Option<T>) -> Patch<T> {

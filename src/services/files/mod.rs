@@ -82,7 +82,7 @@ impl FilesService {
         let db_file = db_file.unwrap();
 
         let directory = config.upload_path();
-        let path = Path::new(&directory).join(&db_file.filename);
+        let path = Path::new(&directory).join(db_file.filename);
 
         path.into_os_string().into_string().map_err(|_| FilesServiceErr::Internal)
     }
@@ -109,7 +109,7 @@ impl FilesService {
         }
 
         let full_filename = f.file_name.ok_or(FilesServiceErr::ForbiddenFileType)?;
-        let ext = full_filename.split(".").last().ok_or(FilesServiceErr::ForbiddenFileType)?;
+        let ext = full_filename.split('.').last().ok_or(FilesServiceErr::ForbiddenFileType)?;
 
         let uuid = Uuid::new_v4();
         let filename = format!("{uuid}.{ext}");
