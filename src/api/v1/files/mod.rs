@@ -1,5 +1,6 @@
 mod dto;
 mod create_file;
+mod get_file;
 
 use actix_web::web::{self, Data};
 

@@ -13,10 +13,9 @@ pub(super) async fn create_file(
     let result = files_service.save_file(form.files, config.as_ref())
         .await
         .map_err(|err| match err {
+            FilesServiceErr::NotFound => ApiError::internal_error(),
             FilesServiceErr::Internal => ApiError::internal_error(),
-            FilesServiceErr::NoFilesToUpload => ApiError::invalid_data(),
-            FilesServiceErr::ForbiddenFileType => ApiError::invalid_data(),
-            FilesServiceErr::MaxFileSizeExceed => ApiError::invalid_data(),
+            _ => ApiError::invalid_data(),
         })
         .map(|res| HttpResponse::Ok().json(res));
 

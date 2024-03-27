@@ -68,9 +68,9 @@ impl FilesService {
         buf == &FilesService::JPEG_FILE_SIGNATURE || buf == &FilesService::JPG_FILE_SIGNATURE
     }
 
-    pub async fn get_file<T>(&self, uid: Uuid, config: &T) -> Result<fs::File, FilesServiceErr>
-        where:
-            T: UploadPathProvider
+    pub async fn get_file<T>(&self, uid: Uuid, config: &T) -> Result<String, FilesServiceErr>
+        where
+            T: UploadPathProvider,
     {
         let db_file = File::find_by_id(uid).one(&self.db).await
             .map_err(|_| FilesServiceErr::Internal)?;
@@ -84,8 +84,7 @@ impl FilesService {
         let directory = config.upload_path();
         let path = Path::new(&directory).join(&db_file.filename);
 
-        // TODO: доделать получение стрима файла
-        fs::(path);
+        path.into_os_string().into_string().map_err(|_| FilesServiceErr::Internal)
     }
 
     pub async fn save_file<T>(
