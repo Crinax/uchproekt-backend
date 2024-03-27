@@ -65,7 +65,7 @@ impl FilesService {
     }
 
     fn is_jpeg(&self, buf: &[u8]) -> bool {
-        buf == &FilesService::JPEG_FILE_SIGNATURE || buf == &FilesService::JPG_FILE_SIGNATURE
+        buf == FilesService::JPEG_FILE_SIGNATURE || buf == FilesService::JPG_FILE_SIGNATURE
     }
 
     pub async fn get_file<T>(&self, uid: Uuid, config: &T) -> Result<String, FilesServiceErr>
