@@ -19,8 +19,8 @@ pub(super) async fn create_file(
         })
         .map(|res| HttpResponse::Ok().json(res));
 
-    if result.is_err() {
-        return result.unwrap_err();
+    if let Err(err) = result {
+        return err;
     }
 
     result.unwrap()
