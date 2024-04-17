@@ -7,7 +7,7 @@ use uuid::Uuid;
 use crate::{api::errors::ApiError, config::Config, services::files::{FilesService, FilesServiceErr}};
 
 #[get("/{filename:.*}")]
-pub(super) async fn index(
+pub(super) async fn get_file(
     req: HttpRequest,
     filename: web::Path<Uuid>, 
     file_service: Data<FilesService>,
