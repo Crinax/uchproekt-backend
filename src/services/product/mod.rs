@@ -1,4 +1,5 @@
-use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter};
+use rust_decimal::Decimal;
+use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, Set};
 
 use entity::product::{self, Entity as Product};
 use serde::Serialize;
@@ -27,6 +28,11 @@ pub struct ProductSerializable {
 #[derive(Clone, Debug, Serialize)]
 pub struct ProductIdx {
     idx: Vec<u32>
+}
+
+#[derive(Clone, Debug, Serialize)]
+pub struct ProductInsertion {
+    id: u32,
 }
 
 impl From<&[u32]> for ProductIdx {
@@ -73,6 +79,23 @@ impl ProductService {
                     .map(Into::into)
                     .collect()
             })
+            .map_err(|_| ProductServiceErr::Internal)
+    }
+
+    pub async fn create(&self, name: String, price: Decimal, article: String, description: String, photo: Option<Uuid>) -> Result<ProductInsertion, ProductServiceErr> {
+        Product::insert(
+            product::ActiveModel {
+                name: Set(name),
+                price: Set(price),
+                article: Set(article),
+                description: Set(description),
+                photo: Set(photo),
+                ..Default::default()
+            }
+        )
+            .exec(&self.db)
+            .await
+            .map(|result| ProductInsertion { id: result.last_insert_id as u32 })
             .map_err(|_| ProductServiceErr::Internal)
     }
 
