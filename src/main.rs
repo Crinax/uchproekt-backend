@@ -18,7 +18,9 @@ use sea_orm::{ConnectOptions, Database};
 
 use crate::{
     db::DbUrlProvider,
-    services::{auth::AuthService, category::CategoryService, files::FilesService, product::ProductService},
+    services::{
+        auth::AuthService, category::CategoryService, files::FilesService, product::ProductService,
+    },
 };
 
 #[actix_web::main]

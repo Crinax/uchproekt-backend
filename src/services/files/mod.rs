@@ -11,6 +11,7 @@ pub struct FilesService {
     db: DatabaseConnection
 }
 
+#[derive(Debug)]
 pub enum FilesServiceErr {
     Internal,
     NoFilesToUpload,
@@ -39,8 +40,7 @@ pub trait UploadPathProvider {
 impl FilesService {
     const MAX_FILE_SIZE: usize = 5_242_880;
     const PNG_FILE_SIGNATURE: [u8; 8] = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
-    const JPEG_FILE_SIGNATURE: [u8; 4] = [0xFF, 0xD8, 0xFF, 0xEE];
-    const JPG_FILE_SIGNATURE: [u8; 4] = [0xFF, 0xD8, 0xFF, 0xE0];
+    const JPG_FILE_SIGNATURE: [u8; 3] = [0xFF, 0xD8, 0xFF];
 
     pub fn new(db: DatabaseConnection) -> Self {
         Self { db }
@@ -57,7 +57,7 @@ impl FilesService {
 
         log::info!("{:?}", buf);
 
-        Ok(self.is_png(&buf) || self.is_jpeg(&buf[..4]))
+        Ok(self.is_png(&buf) || self.is_jpeg(&buf[..3]))
     }
 
     fn is_png(&self, buf: &[u8; 8]) -> bool {
@@ -65,7 +65,7 @@ impl FilesService {
     }
 
     fn is_jpeg(&self, buf: &[u8]) -> bool {
-        buf == FilesService::JPEG_FILE_SIGNATURE || buf == FilesService::JPG_FILE_SIGNATURE
+        buf == FilesService::JPG_FILE_SIGNATURE
     }
 
     pub async fn get_file<T>(&self, uid: Uuid, config: &T) -> Result<String, FilesServiceErr>

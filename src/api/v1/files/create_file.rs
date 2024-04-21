@@ -15,7 +15,10 @@ pub(super) async fn create_file(
         .map_err(|err| match err {
             FilesServiceErr::NotFound => ApiError::internal_error(),
             FilesServiceErr::Internal => ApiError::internal_error(),
-            _ => ApiError::invalid_data(),
+            e => {
+                log::error!("{:?}", e); 
+                ApiError::invalid_data()
+            },
         })
         .map(|res| HttpResponse::Ok().json(res));
 
