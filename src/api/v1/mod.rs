@@ -1,7 +1,7 @@
 mod auth;
-mod products;
 mod categories;
 mod files;
+mod products;
 
 use actix_web::web::{self, Data};
 
