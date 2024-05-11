@@ -26,17 +26,6 @@ services:
     volumes:
       - redis_data:/data
 
-  minio:
-    image: "bitnami/minio:latest"
-    ports:
-      - 9010:9000
-      - 9020:9001
-    environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
-      MINIO_DEFAULT_BUCKETS: ${MINIO_BUCKET}
-      MINIO_SKIP_CLIENT: yes
-
 volumes:
   pgdata:
 
