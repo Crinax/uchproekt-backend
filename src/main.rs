@@ -4,6 +4,7 @@ mod config;
 mod db;
 mod services;
 mod utilities;
+mod s3;
 
 use dotenvy::dotenv;
 
