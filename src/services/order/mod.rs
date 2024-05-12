@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use entity::order::{self, Entity as Order};
 use entity::product::{self, Entity as Product};
 use entity::products_in_order::{self, Entity as ProductsInOrder};
-use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, PaginatorTrait, QueryFilter, Set};
+use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, Set};
 use serde::Serialize;
 
 use crate::services::product::ProductSerializable;
@@ -95,10 +95,14 @@ impl OrderService {
             })
             .map_err(|_| OrderInsertionErr::Internal)?;
 
-        ProductsInOrder::insert_many(products_in_order::ActiveModel {
-            order_id: Set(Some(insertion_result.id as i32)),
-            product_id: Set(Some(products.into_iter().map(|e| e as i32).collect())),
-            ..Default::default()
-        });
+        ProductsInOrder::insert_many(products.iter().map(|product| {
+            products_in_order::ActiveModel {
+                product_id: Set(Some(*product as i32)),
+                order_id: Set(Some(insertion_result.id as i32)),
+                ..Default::default()
+            }
+        }));
+
+        Ok(insertion_result)
     }
 }
