@@ -7,8 +7,8 @@ use sea_orm::entity::prelude::*;
 pub struct Model {
     #[sea_orm(primary_key)]
     pub id: i32,
-    pub product_id: Option<i32>,
-    pub order_id: Option<i32>,
+    pub product_id: i32,
+    pub order_id: i32,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
@@ -18,7 +18,7 @@ pub enum Relation {
         from = "Column::OrderId",
         to = "super::order::Column::Id",
         on_update = "NoAction",
-        on_delete = "Cascade"
+        on_delete = "SetNull"
     )]
     Order,
     #[sea_orm(
@@ -26,7 +26,7 @@ pub enum Relation {
         from = "Column::ProductId",
         to = "super::product::Column::Id",
         on_update = "NoAction",
-        on_delete = "Cascade"
+        on_delete = "SetNull"
     )]
     Product,
 }

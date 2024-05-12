@@ -97,8 +97,8 @@ impl OrderService {
 
         ProductsInOrder::insert_many(products.iter().map(|product| {
             products_in_order::ActiveModel {
-                product_id: Set(Some(*product as i32)),
-                order_id: Set(Some(insertion_result.id as i32)),
+                product_id: Set(*product as i32),
+                order_id: Set(insertion_result.id as i32),
                 ..Default::default()
             }
         }));
