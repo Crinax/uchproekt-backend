@@ -3,7 +3,9 @@ use std::collections::HashSet;
 use entity::order::{self, Entity as Order};
 use entity::product::{self, Entity as Product};
 use entity::products_in_order::{self, Entity as ProductsInOrder};
-use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, Set};
+use sea_orm::{
+    ColumnTrait, DatabaseConnection, DbErr, EntityTrait, QueryFilter, Set, TransactionTrait,
+};
 use serde::Serialize;
 
 use crate::services::product::ProductSerializable;
@@ -87,21 +89,31 @@ impl OrderService {
             return Err(OrderInsertionErr::ProductNotFound(not_found_products));
         }
 
-        let insertion_result = Order::insert(model)
-            .exec(&self.db)
-            .await
-            .map(|result| OrderInsertion {
-                id: result.last_insert_id as u32,
-            })
-            .map_err(|_| OrderInsertionErr::Internal)?;
+        let insertion_result = self
+            .db
+            .transaction::<_, OrderInsertion, DbErr>(move |tx| {
+                Box::pin(async move {
+                    let insertion_result =
+                        Order::insert(model)
+                            .exec(tx)
+                            .await
+                            .map(|result| OrderInsertion {
+                                id: result.last_insert_id as u32,
+                            })?;
 
-        ProductsInOrder::insert_many(products.iter().map(|product| {
-            products_in_order::ActiveModel {
-                product_id: Set(*product as i32),
-                order_id: Set(insertion_result.id as i32),
-                ..Default::default()
-            }
-        }));
+                    ProductsInOrder::insert_many(products.iter().map(|product| {
+                        products_in_order::ActiveModel {
+                            product_id: Set(*product as i32),
+                            order_id: Set(insertion_result.id as i32),
+                            ..Default::default()
+                        }
+                    }));
+
+                    Ok(insertion_result)
+                })
+            })
+            .await
+            .map_err(|_| OrderInsertionErr::Internal)?;
 
         Ok(insertion_result)
     }
