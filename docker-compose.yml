@@ -9,12 +9,13 @@ services:
     environment:
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_USER: ${DB_USER}
+      POSTGRES_DB: ${DB_NAME}
     image: postgres
     ports:
       - 5431:5432
     restart: always
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - ./postgres-data:/var/lib/postgresql/data
 
   redis:
     image: docker.dragonflydb.io/dragonflydb/dragonfly:v1.12.1
@@ -27,6 +28,4 @@ services:
       - redis_data:/data
 
 volumes:
-  pgdata:
-
   redis_data:
