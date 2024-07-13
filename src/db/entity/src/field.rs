@@ -24,4 +24,13 @@ impl Related<super::field_product::Entity> for Entity {
     }
 }
 
+impl Related<super::product::Entity> for Entity {
+    fn to() -> RelationDef {
+        super::field_product::Relation::Product.def()
+    }
+    fn via() -> Option<RelationDef> {
+        Some(super::field_product::Relation::Field.def().rev())
+    }
+}
+
 impl ActiveModelBehavior for ActiveModel {}

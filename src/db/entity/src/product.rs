@@ -65,6 +65,15 @@ impl Related<super::category::Entity> for Entity {
     }
 }
 
+impl Related<super::field::Entity> for Entity {
+    fn to() -> RelationDef {
+        super::field_product::Relation::Field.def()
+    }
+    fn via() -> Option<RelationDef> {
+        Some(super::field_product::Relation::Product.def().rev())
+    }
+}
+
 impl Related<super::order::Entity> for Entity {
     fn to() -> RelationDef {
         super::products_in_order::Relation::Order.def()
