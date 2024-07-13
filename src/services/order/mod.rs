@@ -16,6 +16,11 @@ pub enum OrderInsertionErr {
     ProductNotFound(Vec<u32>),
 }
 
+#[derive(Clone, Debug)]
+pub enum OrderGetError {
+    Internal,
+}
+
 pub struct OrderService {
     db: DatabaseConnection,
 }
@@ -30,15 +35,15 @@ pub struct OrderSerializable {
     products: Vec<ProductSerializable>,
 }
 
-impl From<(order::Model, Vec<product::Model>)> for OrderSerializable {
-    fn from((model, products): (order::Model, Vec<product::Model>)) -> Self {
+impl From<&(order::Model, Vec<product::Model>)> for OrderSerializable {
+    fn from((model, products): &(order::Model, Vec<product::Model>)) -> Self {
         Self {
             id: model.id as u32,
-            name: model.name,
-            surname: model.surname,
-            phone: model.phone,
-            address: model.address,
-            products: products.into_iter().map(Into::into).collect(),
+            name: model.name.to_owned(),
+            surname: model.surname.to_owned(),
+            phone: model.phone.to_owned(),
+            address: model.address.to_owned(),
+            products: products.iter().map(Into::into).collect(),
         }
     }
 }
@@ -51,6 +56,15 @@ struct OrderInsertion {
 impl OrderService {
     pub fn new(db: DatabaseConnection) -> Self {
         Self { db }
+    }
+
+    pub async fn get_all(&self) -> Result<Vec<OrderSerializable>, OrderGetError> {
+        Order::find()
+            .find_with_related(Product)
+            .all(&self.db)
+            .await
+            .map_err(|_| OrderGetError::Internal)
+            .map(|orders| orders.iter().map(Into::into).collect())
     }
 
     pub async fn create(
@@ -105,7 +119,6 @@ impl OrderService {
                         products_in_order::ActiveModel {
                             product_id: Set(*product as i32),
                             order_id: Set(insertion_result.id as i32),
-                            ..Default::default()
                         }
                     }));
 
