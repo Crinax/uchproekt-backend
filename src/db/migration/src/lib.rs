@@ -14,6 +14,7 @@ mod m20240125_001325_add_field_product_table;
 mod m20240317_014139_add_file_table;
 mod m20240317_031542_change_product_file_type_to_uuid_and_link_with_file_table;
 mod m20240512_093640_remove_nullable_fields_for_order;
+mod m20240713_170813_define_order_product_stable_relation;
 
 pub struct Migrator;
 
@@ -35,6 +36,7 @@ impl MigratorTrait for Migrator {
             Box::new(m20240317_014139_add_file_table::Migration),
             Box::new(m20240317_031542_change_product_file_type_to_uuid_and_link_with_file_table::Migration),
             Box::new(m20240512_093640_remove_nullable_fields_for_order::Migration),
+            Box::new(m20240713_170813_define_order_product_stable_relation::Migration),
         ]
     }
 }
