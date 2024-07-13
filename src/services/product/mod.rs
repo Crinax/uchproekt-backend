@@ -12,7 +12,7 @@ pub struct ProductService {
 #[derive(Copy, Clone, Debug)]
 pub enum ProductServiceErr {
     Internal,
-    NotFound
+    NotFound,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -27,7 +27,7 @@ pub struct ProductSerializable {
 
 #[derive(Clone, Debug, Serialize)]
 pub struct ProductIdx {
-    idx: Vec<u32>
+    idx: Vec<u32>,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -38,7 +38,7 @@ pub struct ProductInsertion {
 impl From<&[u32]> for ProductIdx {
     fn from(value: &[u32]) -> Self {
         ProductIdx {
-            idx: value.to_vec()
+            idx: value.to_vec(),
         }
     }
 }
@@ -46,7 +46,7 @@ impl From<&[u32]> for ProductIdx {
 impl From<Vec<product::Model>> for ProductIdx {
     fn from(value: Vec<product::Model>) -> Self {
         ProductIdx {
-            idx: value.into_iter().map(|v| v.id as u32).collect()
+            idx: value.into_iter().map(|v| v.id as u32).collect(),
         }
     }
 }
@@ -64,6 +64,19 @@ impl From<product::Model> for ProductSerializable {
     }
 }
 
+impl From<&product::Model> for ProductSerializable {
+    fn from(model: &product::Model) -> Self {
+        ProductSerializable {
+            id: model.id,
+            name: model.name.to_owned(),
+            price: model.price.to_owned(),
+            article: model.article.to_owned(),
+            description: model.description.to_owned(),
+            photo: model.photo,
+        }
+    }
+}
+
 impl ProductService {
     pub fn new(db: DatabaseConnection) -> Self {
         Self { db }
@@ -73,30 +86,32 @@ impl ProductService {
         Product::find()
             .all(&self.db)
             .await
-            .map(|models| {
-                models
-                    .into_iter()
-                    .map(Into::into)
-                    .collect()
-            })
+            .map(|models| models.into_iter().map(Into::into).collect())
             .map_err(|_| ProductServiceErr::Internal)
     }
 
-    pub async fn create(&self, name: String, price: Decimal, article: String, description: String, photo: Option<Uuid>) -> Result<ProductInsertion, ProductServiceErr> {
-        Product::insert(
-            product::ActiveModel {
-                name: Set(name),
-                price: Set(price),
-                article: Set(article),
-                description: Set(description),
-                photo: Set(photo),
-                ..Default::default()
-            }
-        )
-            .exec(&self.db)
-            .await
-            .map(|result| ProductInsertion { id: result.last_insert_id as u32 })
-            .map_err(|_| ProductServiceErr::Internal)
+    pub async fn create(
+        &self,
+        name: String,
+        price: Decimal,
+        article: String,
+        description: String,
+        photo: Option<Uuid>,
+    ) -> Result<ProductInsertion, ProductServiceErr> {
+        Product::insert(product::ActiveModel {
+            name: Set(name),
+            price: Set(price),
+            article: Set(article),
+            description: Set(description),
+            photo: Set(photo),
+            ..Default::default()
+        })
+        .exec(&self.db)
+        .await
+        .map(|result| ProductInsertion {
+            id: result.last_insert_id as u32,
+        })
+        .map_err(|_| ProductServiceErr::Internal)
     }
 
     pub async fn get(&self, id: u32) -> Result<ProductSerializable, ProductServiceErr> {
@@ -110,7 +125,8 @@ impl ProductService {
 
     pub async fn delete(&self, idx: &[u32]) -> Result<ProductIdx, ProductServiceErr> {
         let values = idx.iter().map(|e| Into::<sea_orm::Value>::into(*e));
-        let products = Product::find().filter(product::Column::Id.is_in(values.clone()))
+        let products = Product::find()
+            .filter(product::Column::Id.is_in(values.clone()))
             .all(&self.db)
             .await
             .map_err(|_| ProductServiceErr::Internal)?;
