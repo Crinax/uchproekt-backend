@@ -5,7 +5,7 @@ use validator::Validate;
 
 #[derive(Deserialize, Validate, Debug, Clone)]
 pub struct DeleteProductsDto {
-    pub products: Vec<u32>,
+    pub id: u32,
 }
 
 #[derive(Deserialize, Validate, Debug, Clone)]

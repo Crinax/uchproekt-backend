@@ -1,10 +1,10 @@
+use crate::utilities::serde_utils::Patch;
 use serde::Deserialize;
 use validator::Validate;
-use crate::utilities::serde_utils::Patch;
 
 #[derive(Deserialize, Validate, Debug, Clone)]
 pub struct DeleteCategoriesDto {
-    pub categories: Vec<u32>,
+    pub id: u32,
 }
 
 #[derive(Deserialize, Validate, Debug, Clone)]
@@ -12,7 +12,7 @@ pub struct CreateCategoryDto {
     #[validate(length(min = 3, max = 32))]
     pub name: String,
 
-    pub parent_id: Option<u32>
+    pub parent_id: Option<u32>,
 }
 
 #[derive(Deserialize, Validate, Debug, Clone)]
@@ -21,5 +21,5 @@ pub struct UpdateCategoryDto {
     pub name: Option<String>,
 
     #[serde(default)]
-    pub parent_id: Patch<u32>
+    pub parent_id: Patch<u32>,
 }

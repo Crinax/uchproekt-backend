@@ -1,17 +1,24 @@
-use actix_web::{web::{Data, Json}, HttpResponse, Responder};
+use actix_web::{
+    web::{Data, Path},
+    HttpResponse, Responder,
+};
 use validator::Validate;
 
-use crate::{api::{errors::ApiError, v1::products::dto::DeleteProductsDto}, services::product::ProductService};
+use crate::{
+    api::{errors::ApiError, v1::products::dto::DeleteProductsDto},
+    services::product::ProductService,
+};
 
 pub(super) async fn delete_products(
-    data: Json<DeleteProductsDto>,
-    product_service: Data<ProductService>
+    data: Path<DeleteProductsDto>,
+    product_service: Data<ProductService>,
 ) -> impl Responder {
     if data.validate().is_err() {
         return ApiError::invalid_data();
     }
 
-    let deletion_result = product_service.delete(&data.0.products)
+    let deletion_result = product_service
+        .delete(&[data.id])
         .await
         .map(|data| HttpResponse::Ok().json(data));
 
