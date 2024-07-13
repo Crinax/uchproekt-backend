@@ -35,15 +35,15 @@ pub struct OrderSerializable {
     products: Vec<ProductSerializable>,
 }
 
-impl From<&(order::Model, Vec<product::Model>)> for OrderSerializable {
-    fn from((model, products): &(order::Model, Vec<product::Model>)) -> Self {
+impl From<(order::Model, Vec<product::Model>)> for OrderSerializable {
+    fn from((model, products): (order::Model, Vec<product::Model>)) -> Self {
         Self {
             id: model.id as u32,
-            name: model.name.to_owned(),
-            surname: model.surname.to_owned(),
-            phone: model.phone.to_owned(),
-            address: model.address.to_owned(),
-            products: products.iter().map(Into::into).collect(),
+            name: model.name,
+            surname: model.surname,
+            phone: model.phone,
+            address: model.address,
+            products: products.into_iter().map(Into::into).collect(),
         }
     }
 }
@@ -64,7 +64,7 @@ impl OrderService {
             .all(&self.db)
             .await
             .map_err(|_| OrderGetError::Internal)
-            .map(|orders| orders.iter().map(Into::into).collect())
+            .map(|orders| orders.into_iter().map(Into::into).collect())
     }
 
     pub async fn create(
