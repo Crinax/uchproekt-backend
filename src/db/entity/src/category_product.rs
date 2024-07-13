@@ -5,9 +5,9 @@ use sea_orm::entity::prelude::*;
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel, Eq)]
 #[sea_orm(table_name = "category_product")]
 pub struct Model {
-    #[sea_orm(primary_key)]
-    pub id: i32,
+    #[sea_orm(primary_key, auto_increment = false)]
     pub category_id: i32,
+    #[sea_orm(primary_key, auto_increment = false)]
     pub product_id: i32,
 }
 
@@ -17,7 +17,7 @@ pub enum Relation {
         belongs_to = "super::category::Entity",
         from = "Column::CategoryId",
         to = "super::category::Column::Id",
-        on_update = "NoAction",
+        on_update = "Cascade",
         on_delete = "Cascade"
     )]
     Category,
@@ -25,7 +25,7 @@ pub enum Relation {
         belongs_to = "super::product::Entity",
         from = "Column::ProductId",
         to = "super::product::Column::Id",
-        on_update = "NoAction",
+        on_update = "Cascade",
         on_delete = "Cascade"
     )]
     Product,
