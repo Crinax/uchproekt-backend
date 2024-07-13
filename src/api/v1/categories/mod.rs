@@ -12,6 +12,7 @@ pub(super) fn configure(config: Data<Config>) -> impl Fn(&mut web::ServiceConfig
     move |cfg| {
         cfg.service(get_categories::get_categories)
             .service(get_categories::get_tree_categories)
+            .service(get_categories::get_category_with_products)
             .service(
                 web::resource("")
                     .wrap(JwtAuth::new(config.clone()))

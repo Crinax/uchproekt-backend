@@ -1,11 +1,15 @@
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
-use sea_orm::{ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, Order, QueryFilter, QueryOrder, Set};
+use sea_orm::{
+    ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, Order, QueryFilter, QueryOrder,
+    Set,
+};
 use serde::Serialize;
 
 use entity::category::{self, Entity as Category};
+use entity::product::{self, Entity as Product};
 
-use crate::utilities::serde_utils::Patch;
+use crate::{services::product::ProductSerializable, utilities::serde_utils::Patch};
 
 pub struct CategoryService {
     db: DatabaseConnection,
@@ -16,14 +20,22 @@ pub enum CategoriesServiceErr {
     Internal,
     AlreadyExists,
     InvalidParentId,
-    NotFound
+    NotFound,
 }
 
 #[derive(Serialize, Debug, Clone)]
 pub struct CategorySerializable {
     id: u32,
     name: String,
-    parent_id: Option<u32>
+    parent_id: Option<u32>,
+}
+
+#[derive(Serialize, Debug, Clone)]
+pub struct CategoryWithProductsSerializable {
+    id: u32,
+    name: String,
+    parent_id: Option<u32>,
+    products: Vec<ProductSerializable>,
 }
 
 #[derive(Serialize, Debug, Clone)]
@@ -40,13 +52,16 @@ pub struct CategoryTreeSerializable {
 
 #[derive(Serialize, Debug, Clone)]
 pub struct CategoriesIdx {
-    idx: Vec<u32>
+    idx: Vec<u32>,
 }
 
 impl From<Vec<category::Model>> for CategoriesIdx {
     fn from(value: Vec<category::Model>) -> Self {
         Self {
-            idx: value.into_iter().map(|category| category.id as u32).collect()
+            idx: value
+                .into_iter()
+                .map(|category| category.id as u32)
+                .collect(),
         }
     }
 }
@@ -69,7 +84,7 @@ impl CategoryTreeSerializable {
                 result.push(child);
                 continue;
             }
-            
+
             if let Some(parent_id) = value.parent_id {
                 if !id_mappings.contains_key(&parent_id) {
                     let fake_root = CategoryTreeSerializable {
@@ -85,7 +100,9 @@ impl CategoryTreeSerializable {
 
                 id_mappings.insert(value.id, child.clone());
 
-                if let Some(v) = id_mappings.get(&parent_id) { v.categories.borrow_mut().push(child) }
+                if let Some(v) = id_mappings.get(&parent_id) {
+                    v.categories.borrow_mut().push(child)
+                }
             }
         }
 
@@ -99,6 +116,17 @@ impl From<category::Model> for CategorySerializable {
             id: value.id as u32,
             name: value.name,
             parent_id: value.parent_id.map(|v| v as u32),
+        }
+    }
+}
+
+impl From<(category::Model, Vec<product::Model>)> for CategoryWithProductsSerializable {
+    fn from(value: (category::Model, Vec<product::Model>)) -> Self {
+        Self {
+            id: value.0.id as u32,
+            name: value.0.name,
+            parent_id: value.0.parent_id.map(|v| v as u32),
+            products: value.1.iter().map(Into::into).collect(),
         }
     }
 }
@@ -118,7 +146,7 @@ impl From<category::Model> for CategoryTreeSerializable {
         Self {
             id: value.id as u32,
             name: value.name,
-            categories: Rc::new(RefCell::new(vec![]))
+            categories: Rc::new(RefCell::new(vec![])),
         }
     }
 }
@@ -128,7 +156,7 @@ impl From<&category::Model> for CategoryTreeSerializable {
         Self {
             id: value.id as u32,
             name: value.name.clone(),
-            categories: Rc::new(RefCell::new(vec![]))
+            categories: Rc::new(RefCell::new(vec![])),
         }
     }
 }
@@ -147,6 +175,24 @@ impl CategoryService {
             .map_err(|_| CategoriesServiceErr::Internal)
     }
 
+    pub async fn category_with_products(
+        &self,
+        id: u32,
+    ) -> Result<CategoryWithProductsSerializable, CategoriesServiceErr> {
+        Category::find_by_id(id as i32)
+            .find_with_related(Product)
+            .all(&self.db)
+            .await
+            .map_err(|_| CategoriesServiceErr::Internal)
+            .map(|mut cat| {
+                if cat.is_empty() {
+                    return Err(CategoriesServiceErr::NotFound);
+                }
+
+                Ok(cat.remove(0).into())
+            })?
+    }
+
     pub async fn all_tree(&self) -> Result<Vec<CategoryTreeSerializable>, CategoriesServiceErr> {
         Category::find()
             .order_by(category::Column::Id, Order::Asc)
@@ -156,7 +202,11 @@ impl CategoryService {
             .map_err(|_| CategoriesServiceErr::Internal)
     }
 
-    pub async fn create(&self, name: &str, parent_id: Option<u32>) -> Result<CategoryInsertion, CategoriesServiceErr> {
+    pub async fn create(
+        &self,
+        name: &str,
+        parent_id: Option<u32>,
+    ) -> Result<CategoryInsertion, CategoriesServiceErr> {
         let category = category::ActiveModel {
             name: Set(name.to_owned()),
             parent_id: Set(parent_id.map(|v| v as i32)),
@@ -166,31 +216,36 @@ impl CategoryService {
         Category::insert(category)
             .exec(&self.db)
             .await
-            .map(|model| CategoryInsertion { id: model.last_insert_id as u32 })
-            .map_err(|err| {
-                match err {
-                    sea_orm::DbErr::RecordNotInserted => CategoriesServiceErr::AlreadyExists,
-                    sea_orm::DbErr::Query(sea_orm::RuntimeErr::SqlxError(err)) => {
-                        let database_error = err.as_database_error();
+            .map(|model| CategoryInsertion {
+                id: model.last_insert_id as u32,
+            })
+            .map_err(|err| match err {
+                sea_orm::DbErr::RecordNotInserted => CategoriesServiceErr::AlreadyExists,
+                sea_orm::DbErr::Query(sea_orm::RuntimeErr::SqlxError(err)) => {
+                    let database_error = err.as_database_error();
 
-                        if database_error.is_none() {
-                            return CategoriesServiceErr::Internal;
-                        }
-
-                        let database_error = database_error.unwrap();
-
-                        if database_error.is_foreign_key_violation() {
-                            return CategoriesServiceErr::InvalidParentId;
-                        }
-
-                        CategoriesServiceErr::Internal
+                    if database_error.is_none() {
+                        return CategoriesServiceErr::Internal;
                     }
-                    _ => CategoriesServiceErr::Internal
+
+                    let database_error = database_error.unwrap();
+
+                    if database_error.is_foreign_key_violation() {
+                        return CategoriesServiceErr::InvalidParentId;
+                    }
+
+                    CategoriesServiceErr::Internal
                 }
+                _ => CategoriesServiceErr::Internal,
             })
     }
 
-    pub async fn update(&self, id: u32, new_name: Option<&str>, parent_id: Patch<u32>) -> Result<CategorySerializable, CategoriesServiceErr> {
+    pub async fn update(
+        &self,
+        id: u32,
+        new_name: Option<&str>,
+        parent_id: Patch<u32>,
+    ) -> Result<CategorySerializable, CategoriesServiceErr> {
         let category = Category::find_by_id(id as i32)
             .one(&self.db)
             .await
@@ -216,35 +271,36 @@ impl CategoryService {
             category.parent_id = Set(Some(parent_id as i32));
         }
 
-        category.save(&self.db).await
+        category
+            .save(&self.db)
+            .await
             .map(Into::into)
-            .map_err(|err| {
-                match err {
-                    sea_orm::DbErr::RecordNotInserted => CategoriesServiceErr::AlreadyExists,
-                    sea_orm::DbErr::Query(sea_orm::RuntimeErr::SqlxError(err)) => {
-                        let database_error = err.as_database_error();
+            .map_err(|err| match err {
+                sea_orm::DbErr::RecordNotInserted => CategoriesServiceErr::AlreadyExists,
+                sea_orm::DbErr::Query(sea_orm::RuntimeErr::SqlxError(err)) => {
+                    let database_error = err.as_database_error();
 
-                        if database_error.is_none() {
-                            return CategoriesServiceErr::Internal;
-                        }
-
-                        let database_error = database_error.unwrap();
-
-                        if database_error.is_foreign_key_violation() {
-                            return CategoriesServiceErr::InvalidParentId;
-                        }
-
-                        CategoriesServiceErr::Internal
+                    if database_error.is_none() {
+                        return CategoriesServiceErr::Internal;
                     }
-                    _ => CategoriesServiceErr::Internal
+
+                    let database_error = database_error.unwrap();
+
+                    if database_error.is_foreign_key_violation() {
+                        return CategoriesServiceErr::InvalidParentId;
+                    }
+
+                    CategoriesServiceErr::Internal
                 }
+                _ => CategoriesServiceErr::Internal,
             })
     }
 
     pub async fn delete(&self, idx: &[u32]) -> Result<CategoriesIdx, CategoriesServiceErr> {
         let values = idx.iter().map(|v| Into::<sea_orm::Value>::into(*v));
 
-        let categories = Category::find().filter(category::Column::Id.is_in(values.clone()))
+        let categories = Category::find()
+            .filter(category::Column::Id.is_in(values.clone()))
             .all(&self.db)
             .await
             .map_err(|_| CategoriesServiceErr::Internal)?;

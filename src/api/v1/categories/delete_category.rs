@@ -1,5 +1,5 @@
 use actix_web::{
-    web::{Data, Path, Query},
+    web::{Data, Path},
     HttpResponse, Responder,
 };
 use validator::Validate;
