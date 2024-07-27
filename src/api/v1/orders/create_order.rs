@@ -1,13 +1,15 @@
 use actix_web::{
+    post,
     web::{Data, Json},
     HttpResponse, Responder,
 };
 
 use crate::{
     api::{errors::ApiError, v1::orders::dto::CreateOrderDto},
-    services::order::OrderService,
+    services::order::{OrderInsertionErr, OrderService},
 };
 
+#[post("")]
 pub(super) async fn create_order(
     order_service: Data<OrderService>,
     body: Json<CreateOrderDto>,
@@ -21,7 +23,13 @@ pub(super) async fn create_order(
             body.0.products,
         )
         .await
-        .map_err(|_| ApiError::internal_error())
+        .map_err(|err| {
+            if let OrderInsertionErr::ProductNotFound(ids) = err {
+                return ApiError::not_found_ids(ids);
+            }
+
+            ApiError::internal_error()
+        })
         .map(|res| HttpResponse::Ok().json(res));
 
     if let Err(err) = order {

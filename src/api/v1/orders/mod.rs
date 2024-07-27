@@ -8,11 +8,10 @@ use crate::{api::middlewares::authenticate::JwtAuth, config::Config};
 
 pub(super) fn configure(config: Data<Config>) -> impl Fn(&mut web::ServiceConfig) {
     move |cfg| {
-        cfg.service(
+        cfg.service(create_order::create_order).service(
             web::resource("")
                 .wrap(JwtAuth::new(config.clone()))
-                .get(get_orders::get_orders)
-                .post(create_order::create_order),
+                .get(get_orders::get_orders),
         );
     }
 }
