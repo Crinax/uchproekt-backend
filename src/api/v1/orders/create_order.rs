@@ -3,6 +3,7 @@ use actix_web::{
     web::{Data, Json},
     HttpResponse, Responder,
 };
+use validator::Validate;
 
 use crate::{
     api::{errors::ApiError, v1::orders::dto::CreateOrderDto},
@@ -14,6 +15,10 @@ pub(super) async fn create_order(
     order_service: Data<OrderService>,
     body: Json<CreateOrderDto>,
 ) -> impl Responder {
+    if body.validate().is_err() {
+        return ApiError::invalid_data();
+    }
+
     let order = order_service
         .create(
             body.0.name,
