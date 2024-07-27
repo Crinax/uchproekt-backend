@@ -26,6 +26,39 @@ pub struct ProductSerializable {
 }
 
 #[derive(Clone, Debug, Serialize)]
+pub struct ProductWithQuantitySerializable {
+    pub product: ProductSerializable,
+    pub quantity: u32,
+}
+
+#[derive(Clone, Debug)]
+pub struct ProductWithQuantityModel {
+    pub id: i32,
+    pub name: String,
+    pub price: Decimal,
+    pub article: String,
+    pub description: String,
+    pub photo: Option<Uuid>,
+    pub quantity: i32,
+}
+
+impl From<ProductWithQuantityModel> for ProductWithQuantitySerializable {
+    fn from(value: ProductWithQuantityModel) -> Self {
+        ProductWithQuantitySerializable {
+            product: ProductSerializable {
+                id: value.id,
+                name: value.name,
+                price: value.price,
+                article: value.article,
+                description: value.description,
+                photo: value.photo,
+            },
+            quantity: value.quantity as u32,
+        }
+    }
+}
+
+#[derive(Clone, Debug, Serialize)]
 pub struct ProductIdx {
     idx: Vec<u32>,
 }

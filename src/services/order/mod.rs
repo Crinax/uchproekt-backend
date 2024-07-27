@@ -1,14 +1,18 @@
-use std::collections::HashSet;
+use std::collections::{hash_map::Entry, HashMap, HashSet};
 
 use entity::order::{self, Entity as Order};
 use entity::product::{self, Entity as Product};
 use entity::products_in_order::{self, Entity as ProductsInOrder};
 use sea_orm::{
-    ColumnTrait, DatabaseConnection, DbErr, EntityTrait, QueryFilter, Set, TransactionTrait,
+    ColumnTrait, DatabaseConnection, DbErr, EntityTrait, FromQueryResult, JoinType, QueryFilter,
+    QuerySelect, RelationTrait, Set, TransactionTrait,
 };
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
-use crate::services::product::ProductSerializable;
+use crate::{
+    services::product::{ProductWithQuantityModel, ProductWithQuantitySerializable},
+    utilities::seaorm_utils::{parse_query_to_model, Prefixer},
+};
 
 #[derive(Clone, Debug)]
 pub enum OrderInsertionErr {
@@ -25,6 +29,12 @@ pub struct OrderService {
     db: DatabaseConnection,
 }
 
+#[derive(Clone, Debug, Deserialize)]
+pub struct ProductWithQuantity {
+    id: u32,
+    quantity: u32,
+}
+
 #[derive(Clone, Debug, Serialize)]
 pub struct OrderSerializable {
     id: u32,
@@ -32,25 +42,48 @@ pub struct OrderSerializable {
     surname: String,
     phone: String,
     address: String,
-    products: Vec<ProductSerializable>,
-}
-
-impl From<(order::Model, Vec<product::Model>)> for OrderSerializable {
-    fn from((model, products): (order::Model, Vec<product::Model>)) -> Self {
-        Self {
-            id: model.id as u32,
-            name: model.name,
-            surname: model.surname,
-            phone: model.phone,
-            address: model.address,
-            products: products.into_iter().map(Into::into).collect(),
-        }
-    }
+    products: Vec<ProductWithQuantitySerializable>,
 }
 
 #[derive(Clone, Debug, Serialize)]
-struct OrderInsertion {
+pub struct OrderInsertion {
     id: u32,
+}
+
+#[derive(Clone, Debug)]
+struct OrderWithProductsModel {
+    pub id: i32,
+    pub name: String,
+    pub surname: String,
+    pub phone: String,
+    pub address: String,
+    pub product: ProductWithQuantityModel,
+}
+
+impl FromQueryResult for OrderWithProductsModel {
+    fn from_query_result(res: &sea_orm::prelude::QueryResult, _pre: &str) -> Result<Self, DbErr> {
+        let order = parse_query_to_model::<order::Model, Order>(res)?;
+        let products_in_order =
+            parse_query_to_model::<products_in_order::Model, ProductsInOrder>(res)?;
+        let product = parse_query_to_model::<product::Model, Product>(res)?;
+
+        Ok(OrderWithProductsModel {
+            id: order.id,
+            name: order.name,
+            surname: order.surname,
+            phone: order.phone,
+            address: order.address,
+            product: ProductWithQuantityModel {
+                id: product.id,
+                name: product.name,
+                price: product.price,
+                article: product.article,
+                description: product.description,
+                photo: product.photo,
+                quantity: products_in_order.quantity,
+            },
+        })
+    }
 }
 
 impl OrderService {
@@ -59,12 +92,47 @@ impl OrderService {
     }
 
     pub async fn get_all(&self) -> Result<Vec<OrderSerializable>, OrderGetError> {
-        Order::find()
-            .find_with_related(Product)
+        let select = Order::find()
+            .join(JoinType::LeftJoin, order::Relation::ProductsInOrder.def())
+            .join(
+                JoinType::LeftJoin,
+                products_in_order::Relation::Product.def(),
+            );
+
+        let result = Prefixer::new(select)
+            .add_columns(Order)
+            .add_columns(ProductsInOrder)
+            .add_columns(Product)
+            .selector
+            .into_model::<OrderWithProductsModel>()
             .all(&self.db)
             .await
-            .map_err(|_| OrderGetError::Internal)
-            .map(|orders| orders.into_iter().map(Into::into).collect())
+            .map_err(|_| OrderGetError::Internal)?;
+
+        let mut order_index_map: HashMap<i32, usize> = HashMap::new();
+        let mut response: Vec<OrderSerializable> = Vec::new();
+
+        for (index, order) in result.iter().enumerate() {
+            if let Entry::Vacant(e) = order_index_map.entry(order.id) {
+                response.push(OrderSerializable {
+                    id: order.id as u32,
+                    name: order.name.clone(),
+                    surname: order.surname.clone(),
+                    phone: order.phone.clone(),
+                    address: order.address.clone(),
+                    products: Vec::new(),
+                });
+
+                e.insert(index);
+
+                response[index].products.push(order.product.clone().into())
+            } else {
+                let key = order_index_map.get(&order.id).unwrap();
+                response[*key].products.push(order.product.clone().into());
+            }
+        }
+
+        Ok(response)
     }
 
     pub async fn create(
@@ -73,7 +141,7 @@ impl OrderService {
         surname: String,
         phone: String,
         address: String,
-        products: Vec<u32>,
+        products: Vec<ProductWithQuantity>,
     ) -> Result<OrderInsertion, OrderInsertionErr> {
         let model = order::ActiveModel {
             name: Set(name),
@@ -83,10 +151,16 @@ impl OrderService {
             ..Default::default()
         };
 
-        let set_of_products: HashSet<u32> = products.clone().into_iter().collect();
+        let set_of_products: HashMap<u32, u32> = products
+            .clone()
+            .into_iter()
+            .map(|pr| (pr.id, pr.quantity))
+            .collect();
+
+        let ids: HashSet<u32> = set_of_products.keys().copied().collect();
 
         let not_found_products: Vec<u32> = Product::find()
-            .filter(product::Column::Id.is_in(products.clone()))
+            .filter(product::Column::Id.is_in(ids.clone()))
             .all(&self.db)
             .await
             .map(|prdcts| {
@@ -95,7 +169,7 @@ impl OrderService {
                     .map(|product| product.id as u32)
                     .collect::<HashSet<u32>>();
 
-                set_of_products.difference(&result).copied().collect()
+                ids.difference(&result).copied().collect()
             })
             .map_err(|_| OrderInsertionErr::Internal)?;
 
@@ -117,8 +191,9 @@ impl OrderService {
 
                     ProductsInOrder::insert_many(products.iter().map(|product| {
                         products_in_order::ActiveModel {
-                            product_id: Set(*product as i32),
+                            product_id: Set(product.id as i32),
                             order_id: Set(insertion_result.id as i32),
+                            quantity: Set(product.quantity as i32),
                         }
                     }));
 
