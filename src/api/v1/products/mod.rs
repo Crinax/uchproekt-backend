@@ -3,7 +3,7 @@ mod delete_products;
 mod dto;
 mod get_products;
 
-use actix_web::web::{self, resource, Data};
+use actix_web::web::{self, Data};
 
 use crate::{api::middlewares::authenticate::JwtAuth, config::Config};
 
