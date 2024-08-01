@@ -11,5 +11,4 @@ pub mod file;
 pub mod order;
 pub mod product;
 pub mod products_in_order;
-pub mod sea_orm_active_enums;
 pub mod service;
