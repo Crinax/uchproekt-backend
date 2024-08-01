@@ -1,4 +1,7 @@
-use actix_web::{web::{Data, Json}, HttpResponse, Responder};
+use actix_web::{
+    web::{Data, Json},
+    HttpResponse, Responder,
+};
 use rust_decimal::Decimal;
 use validator::Validate;
 
@@ -8,7 +11,7 @@ use super::dto::CreateProductsDto;
 
 pub(super) async fn create_product(
     data: Json<CreateProductsDto>,
-    product_service: Data<ProductService>
+    product_service: Data<ProductService>,
 ) -> impl Responder {
     if data.validate().is_err() {
         return ApiError::invalid_data();
@@ -18,13 +21,14 @@ pub(super) async fn create_product(
         return ApiError::invalid_data();
     }
 
-    let result = product_service.create(
-        data.0.name,
-        data.0.price, 
-        data.0.article, 
-        data.0.description, 
-        data.0.photo
-    )
+    let result = product_service
+        .create(
+            data.0.name,
+            data.0.price,
+            data.0.article,
+            data.0.description,
+            data.0.photo,
+        )
         .await
         .map(|value| HttpResponse::Ok().json(value))
         .map_err(|_| ApiError::internal_error());

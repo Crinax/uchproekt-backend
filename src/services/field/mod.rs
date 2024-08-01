@@ -43,7 +43,7 @@ impl FieldService {
         Field::find_by_id(id)
             .one(&self.db)
             .await
-            .map_err(|err| FieldGetError::Unknown)?
+            .map_err(|_| FieldGetError::Unknown)?
             .ok_or(FieldGetError::NotFound)
             .map(|field| dto::FieldSerializable {
                 id: field.id,
