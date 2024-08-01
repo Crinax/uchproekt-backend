@@ -15,6 +15,7 @@ use config::Config;
 use env_logger::Env;
 use migration::{Migrator, MigratorTrait};
 use sea_orm::{ConnectOptions, Database};
+use services::field::FieldService;
 
 use crate::{
     db::DbUrlProvider,
@@ -49,6 +50,7 @@ async fn main() -> std::io::Result<()> {
     let category_service = web::Data::new(CategoryService::new(db.clone()));
     let files_service = web::Data::new(FilesService::new(db.clone()));
     let order_service = web::Data::new(OrderService::new(db.clone()));
+    let field_service = web::Data::new(FieldService::new(db.clone()));
 
     log::info!("Running migrations...");
     Migrator::up(&db, None)
@@ -89,6 +91,7 @@ async fn main() -> std::io::Result<()> {
             .app_data(category_service.clone())
             .app_data(files_service.clone())
             .app_data(order_service.clone())
+            .app_data(field_service.clone())
             .wrap(Logger::default())
             .service(web::scope("/api").configure(api::configure(config.clone())))
     })
