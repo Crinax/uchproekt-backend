@@ -23,6 +23,24 @@ pub enum FieldCreateError {
     Unknown,
 }
 
+#[derive(Clone, Debug, Serialize)]
+pub enum FieldGetError {
+    #[serde(rename = "not_found")]
+    NotFound,
+
+    #[serde(rename = "unknown")]
+    Unknown,
+}
+
+#[derive(Clone, Debug, Serialize)]
+pub enum FieldUpdateError {
+    #[serde(rename = "not_found")]
+    NotFound,
+
+    #[serde(rename = "unknown")]
+    Unknown,
+}
+
 impl From<FieldModel> for FieldSerializable {
     fn from(model: FieldModel) -> Self {
         Self {
