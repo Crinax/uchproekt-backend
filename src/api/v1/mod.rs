@@ -4,6 +4,8 @@ mod files;
 mod orders;
 mod products;
 
+pub use products::FieldInProductDto;
+
 use actix_web::web::{self, Data};
 
 use crate::config::Config;

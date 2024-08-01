@@ -3,9 +3,17 @@ use serde::Deserialize;
 use uuid::Uuid;
 use validator::Validate;
 
+use crate::services::field::field_type::FieldType;
+
 #[derive(Deserialize, Validate, Debug, Clone)]
 pub struct DeleteProductsDto {
     pub id: u32,
+}
+
+#[derive(Deserialize, Validate, Debug, Clone)]
+pub struct FieldInProductDto {
+    pub id: u32,
+    pub value: String,
 }
 
 #[derive(Deserialize, Validate, Debug, Clone)]
@@ -22,4 +30,6 @@ pub struct CreateProductsDto {
     pub description: String,
 
     pub photo: Option<Uuid>,
+
+    pub fields: Vec<FieldInProductDto>,
 }

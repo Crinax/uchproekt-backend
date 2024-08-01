@@ -1,9 +1,18 @@
+use migration::InsertStatement;
+use migration::OnConflict;
 use rust_decimal::Decimal;
-use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, Set};
+use sea_orm::{
+    ColumnTrait, ConnectionTrait, DatabaseConnection, EntityTrait, QueryFilter, Set,
+    TransactionTrait,
+};
 
+use entity::field;
+use entity::field_product;
 use entity::product::{self, Entity as Product};
 use serde::Serialize;
 use uuid::Uuid;
+
+use crate::api::FieldInProductDto;
 
 pub struct ProductService {
     db: DatabaseConnection,
@@ -130,8 +139,15 @@ impl ProductService {
         article: String,
         description: String,
         photo: Option<Uuid>,
+        fields: Vec<FieldInProductDto>,
     ) -> Result<ProductInsertion, ProductServiceErr> {
-        Product::insert(product::ActiveModel {
+        let mut transaction = self
+            .db
+            .begin()
+            .await
+            .map_err(|_| ProductServiceErr::Internal)?;
+
+        let result = Product::insert(product::ActiveModel {
             name: Set(name),
             price: Set(price),
             article: Set(article),
@@ -139,12 +155,36 @@ impl ProductService {
             photo: Set(photo),
             ..Default::default()
         })
-        .exec(&self.db)
+        .exec(&transaction)
         .await
         .map(|result| ProductInsertion {
             id: result.last_insert_id as u32,
         })
-        .map_err(|_| ProductServiceErr::Internal)
+        .map_err(|_| ProductServiceErr::Internal)?;
+
+        field_product::Entity::insert_many(fields.iter().map(|f| field_product::ActiveModel {
+            product_id: Set(result.id as i32),
+            field_id: Set(f.id as i32),
+            value: Set(f.value.to_owned()),
+        }))
+        .on_conflict(
+            OnConflict::columns([
+                field_product::Column::ProductId,
+                field_product::Column::FieldId,
+            ])
+            .update_column(field_product::Column::Value)
+            .to_owned(),
+        )
+        .exec(&transaction)
+        .await
+        .map_err(|_| ProductServiceErr::Internal)?;
+
+        transaction
+            .commit()
+            .await
+            .map_err(|_| ProductServiceErr::Internal)?;
+
+        Ok(result)
     }
 
     pub async fn get(&self, id: u32) -> Result<ProductSerializable, ProductServiceErr> {

@@ -2,6 +2,8 @@ pub mod errors;
 mod middlewares;
 mod v1;
 
+pub use v1::FieldInProductDto;
+
 use actix_web::web::{self, Data};
 use serde::Serialize;
 

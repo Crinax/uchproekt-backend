@@ -28,6 +28,7 @@ pub(super) async fn create_product(
             data.0.article,
             data.0.description,
             data.0.photo,
+            data.0.fields,
         )
         .await
         .map(|value| HttpResponse::Ok().json(value))

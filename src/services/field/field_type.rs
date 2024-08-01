@@ -1,6 +1,6 @@
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Serialize, Clone, Default)]
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub enum FieldType {
     #[serde(rename = "string")]
     String,

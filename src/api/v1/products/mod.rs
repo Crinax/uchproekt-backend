@@ -3,6 +3,8 @@ mod delete_products;
 mod dto;
 mod get_products;
 
+pub use dto::FieldInProductDto;
+
 use actix_web::web::{self, Data};
 
 use crate::{api::middlewares::authenticate::JwtAuth, config::Config};

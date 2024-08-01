@@ -1,13 +1,9 @@
 pub mod dto;
 pub mod field_type;
 
-use dto::{FieldCreateError, FieldGetError, FieldId, FieldSerializable, FieldUpdateError};
-use entity::{
-    field::{self, Entity as Field},
-    field_product::{self, Entity as FieldInProduct},
-};
+use dto::{FieldCreateError, FieldGetError, FieldId, FieldSerializable};
+use entity::field::{self, Entity as Field};
 use field_type::FieldType;
-use migration::OnConflict;
 use sea_orm::{DatabaseConnection, EntityTrait, Set};
 
 pub struct FieldService {
@@ -50,30 +46,5 @@ impl FieldService {
                 name: field.name,
                 r#type: field.r#type.into(),
             })
-    }
-
-    pub async fn upsert_value(
-        &self,
-        product_id: i32,
-        field_id: i32,
-        value: &str,
-    ) -> Result<(), FieldUpdateError> {
-        FieldInProduct::insert(field_product::ActiveModel {
-            field_id: Set(field_id),
-            product_id: Set(product_id),
-            value: Set(value.to_owned()),
-        })
-        .on_conflict(
-            OnConflict::columns([
-                field_product::Column::FieldId,
-                field_product::Column::ProductId,
-            ])
-            .update_column(field_product::Column::Value)
-            .to_owned(),
-        )
-        .exec(&self.db)
-        .await
-        .map_err(|_| FieldUpdateError::Unknown)
-        .map(|_| ())
     }
 }
