@@ -20,9 +20,24 @@ pub struct FieldInProductAddOrUpdate {
     #[validate(length(min = 1))]
     pub value: String,
 }
+#[derive(Deserialize, Validate, Debug, Clone)]
+pub struct UpdateProductsDto {
+    #[validate(length(min = 3))]
+    pub name: String,
+
+    pub price: Decimal,
+
+    #[validate(length(min = 1))]
+    pub article: String,
+
+    #[validate(length(min = 1))]
+    pub description: String,
+
+    pub photo: Option<Uuid>,
+}
 
 #[derive(Deserialize, Validate, Debug, Clone)]
-pub struct CreateUpdateProductsDto {
+pub struct CreateProductsDto {
     #[validate(length(min = 3))]
     pub name: String,
 

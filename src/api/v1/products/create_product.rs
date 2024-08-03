@@ -7,10 +7,10 @@ use validator::Validate;
 
 use crate::{api::errors::ApiError, services::product::ProductService};
 
-use super::dto::CreateUpdateProductsDto;
+use super::dto::CreateProductsDto;
 
 pub(super) async fn create_product(
-    data: Json<CreateUpdateProductsDto>,
+    data: Json<CreateProductsDto>,
     product_service: Data<ProductService>,
 ) -> impl Responder {
     if data.validate().is_err() {

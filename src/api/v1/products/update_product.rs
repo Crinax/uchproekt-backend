@@ -9,7 +9,7 @@ use crate::{
     services::product::{ProductService, ProductServiceErr},
 };
 
-use super::dto::{CreateUpdateProductsDto, FieldInProductAddOrUpdate};
+use super::dto::{CreateProductsDto, FieldInProductAddOrUpdate, UpdateProductsDto};
 
 pub(super) async fn add_or_update_field_to_product(
     product_id: Path<u32>,
@@ -39,7 +39,7 @@ pub(super) async fn add_or_update_field_to_product(
 
 pub(super) async fn update_product(
     id: Path<u32>,
-    data: Json<CreateUpdateProductsDto>,
+    data: Json<UpdateProductsDto>,
     service: Data<ProductService>,
 ) -> impl Responder {
     if data.validate().is_err() {
