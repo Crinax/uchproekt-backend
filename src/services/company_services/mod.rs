@@ -1,7 +1,8 @@
-mod dto;
+pub mod dto;
+
 use dto::{
     CompanyServiceIdSerializable, CompanyServiceSerializable, GetCompanyServicesError,
-    UpdateCompanyServiceError,
+    UpdateRemoveCompanyServiceError,
 };
 use entity::service;
 use rust_decimal::Decimal;
@@ -32,7 +33,7 @@ impl CompanyServicesService {
         id: u32,
         name: &str,
         price: Decimal,
-    ) -> Result<CompanyServiceIdSerializable, UpdateCompanyServiceError> {
+    ) -> Result<CompanyServiceIdSerializable, UpdateRemoveCompanyServiceError> {
         let model = service::ActiveModel {
             id: Set(id as i32),
             name: Set(name.to_string()),
@@ -43,17 +44,17 @@ impl CompanyServicesService {
             .exec(&self.db)
             .await
             .map(|_| CompanyServiceIdSerializable { id })
-            .map_err(|_| UpdateCompanyServiceError::InternalError)
+            .map_err(|_| UpdateRemoveCompanyServiceError::InternalError)
     }
 
     pub async fn delete(
         &self,
         id: u32,
-    ) -> Result<CompanyServiceIdSerializable, UpdateCompanyServiceError> {
+    ) -> Result<CompanyServiceIdSerializable, UpdateRemoveCompanyServiceError> {
         service::Entity::delete_by_id(id as i32)
             .exec(&self.db)
             .await
             .map(|_| CompanyServiceIdSerializable { id })
-            .map_err(|_| UpdateCompanyServiceError::InternalError)
+            .map_err(|_| UpdateRemoveCompanyServiceError::InternalError)
     }
 }

@@ -20,7 +20,7 @@ pub enum GetCompanyServicesError {
 }
 
 #[derive(Clone, Debug, Serialize, PartialEq, Eq)]
-pub enum UpdateCompanyServiceError {
+pub enum UpdateRemoveCompanyServiceError {
     #[serde(rename = "not_found")]
     NotFound,
 

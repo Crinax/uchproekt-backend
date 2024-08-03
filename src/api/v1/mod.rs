@@ -1,5 +1,6 @@
 mod auth;
 mod categories;
+mod company_services;
 mod fields;
 mod files;
 mod orders;
@@ -18,6 +19,9 @@ pub(super) fn configure(config: Data<Config>) -> impl Fn(&mut web::ServiceConfig
             .service(web::scope("/categories").configure(categories::configure(config.clone())))
             .service(web::scope("/files").configure(files::configure(config.clone())))
             .service(web::scope("/orders").configure(orders::configure(config.clone())))
-            .service(web::scope("/fields").configure(fields::configure(config.clone())));
+            .service(web::scope("/fields").configure(fields::configure(config.clone())))
+            .service(
+                web::scope("/services").configure(company_services::configure(config.clone())),
+            );
     }
 }
