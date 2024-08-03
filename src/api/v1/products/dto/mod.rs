@@ -3,8 +3,6 @@ use serde::Deserialize;
 use uuid::Uuid;
 use validator::Validate;
 
-use crate::services::field::field_type::FieldType;
-
 #[derive(Deserialize, Validate, Debug, Clone)]
 pub struct DeleteProductsDto {
     pub id: u32,

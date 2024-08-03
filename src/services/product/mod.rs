@@ -141,7 +141,7 @@ impl ProductService {
         photo: Option<Uuid>,
         fields: Vec<FieldInProductDto>,
     ) -> Result<ProductInsertion, ProductServiceErr> {
-        let mut transaction = self
+        let transaction = self
             .db
             .begin()
             .await
