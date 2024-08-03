@@ -1,4 +1,5 @@
 mod create_fields;
+mod delete_fields;
 pub mod dto;
 mod get_fields;
 
@@ -13,6 +14,11 @@ pub(super) fn configure(config: Data<Config>) -> impl Fn(&mut web::ServiceConfig
                 .wrap(JwtAuth::new(config.clone()))
                 .post(create_fields::create_field)
                 .get(get_fields::get_fields),
+        )
+        .service(
+            web::resource("{field_id}")
+                .wrap(JwtAuth::new(config.clone()))
+                .delete(delete_fields::delete_field),
         );
     }
 }

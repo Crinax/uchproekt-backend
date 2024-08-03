@@ -11,7 +11,7 @@ pub struct FieldSerializable {
 
 #[derive(Clone, Debug, Serialize)]
 pub struct FieldId {
-    pub(super) id: i32,
+    pub(super) id: u32,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -24,7 +24,7 @@ pub enum FieldCreateError {
 }
 
 #[derive(Clone, Debug, Serialize)]
-pub enum FieldGetError {
+pub enum FieldGetRemoveError {
     #[serde(rename = "not_found")]
     NotFound,
 

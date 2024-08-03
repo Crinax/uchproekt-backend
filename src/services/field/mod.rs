@@ -1,7 +1,7 @@
 pub mod dto;
 pub mod field_type;
 
-use dto::{FieldCreateError, FieldGetError, FieldId, FieldSerializable};
+use dto::{FieldCreateError, FieldGetRemoveError, FieldId, FieldSerializable};
 use entity::field::{self, Entity as Field};
 use field_type::FieldType;
 use sea_orm::{DatabaseConnection, EntityTrait, Set};
@@ -31,28 +31,26 @@ impl FieldService {
                 _ => FieldCreateError::Unknown,
             })
             .map(|field| FieldId {
-                id: field.last_insert_id,
+                id: field.last_insert_id as u32,
             })
     }
 
-    pub async fn get_all(&self) -> Result<Vec<FieldSerializable>, FieldGetError> {
+    pub async fn get_all(&self) -> Result<Vec<FieldSerializable>, FieldGetRemoveError> {
         Field::find()
             .all(&self.db)
             .await
-            .map_err(|_| FieldGetError::Unknown)
+            .map_err(|_| FieldGetRemoveError::Unknown)
             .map(|result| result.into_iter().map(FieldSerializable::from).collect())
     }
 
-    pub async fn get(&self, id: i32) -> Result<FieldSerializable, FieldGetError> {
-        Field::find_by_id(id)
-            .one(&self.db)
+    pub async fn remove(&self, id: u32) -> Result<FieldId, FieldGetRemoveError> {
+        Field::delete_by_id(id as i32)
+            .exec(&self.db)
             .await
-            .map_err(|_| FieldGetError::Unknown)?
-            .ok_or(FieldGetError::NotFound)
-            .map(|field| dto::FieldSerializable {
-                id: field.id,
-                name: field.name,
-                r#type: field.r#type.into(),
+            .map_err(|err| match err {
+                sea_orm::DbErr::RecordNotFound(_) => FieldGetRemoveError::NotFound,
+                _ => FieldGetRemoveError::Unknown,
             })
+            .map(|_| FieldId { id })
     }
 }
