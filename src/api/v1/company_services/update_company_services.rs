@@ -9,11 +9,11 @@ use crate::{
     services::company_services::{dto::UpdateRemoveCompanyServiceError, CompanyServicesService},
 };
 
-use super::dto::UpdateCompanyServiceDto;
+use super::dto::UpdateCreateCompanyServiceDto;
 
 pub(super) async fn update_service(
     id: Path<u32>,
-    data: Json<UpdateCompanyServiceDto>,
+    data: Json<UpdateCreateCompanyServiceDto>,
     service: Data<CompanyServicesService>,
 ) -> impl Responder {
     if data.validate().is_err() {

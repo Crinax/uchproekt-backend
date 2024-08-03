@@ -14,7 +14,7 @@ pub struct CompanyServiceIdSerializable {
 }
 
 #[derive(Clone, Debug, Serialize, PartialEq, Eq)]
-pub enum GetCompanyServicesError {
+pub enum GetCreateCompanyServicesError {
     #[serde(rename = "internal_error")]
     InternalError,
 }

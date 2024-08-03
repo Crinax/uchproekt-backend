@@ -1,7 +1,7 @@
 pub mod dto;
 
 use dto::{
-    CompanyServiceIdSerializable, CompanyServiceSerializable, GetCompanyServicesError,
+    CompanyServiceIdSerializable, CompanyServiceSerializable, GetCreateCompanyServicesError,
     UpdateRemoveCompanyServiceError,
 };
 use entity::service;
@@ -18,14 +18,34 @@ impl CompanyServicesService {
         Self { db }
     }
 
+    pub async fn create(
+        &self,
+        name: &str,
+        price: Decimal,
+    ) -> Result<CompanyServiceIdSerializable, GetCreateCompanyServicesError> {
+        let model = service::ActiveModel {
+            name: Set(name.to_string()),
+            price: Set(price),
+            ..Default::default()
+        };
+
+        service::Entity::insert(model)
+            .exec(&self.db)
+            .await
+            .map(|result| CompanyServiceIdSerializable {
+                id: result.last_insert_id as u32,
+            })
+            .map_err(|_| GetCreateCompanyServicesError::InternalError)
+    }
+
     pub async fn get_all(
         &self,
-    ) -> Result<Vec<CompanyServiceSerializable>, GetCompanyServicesError> {
+    ) -> Result<Vec<CompanyServiceSerializable>, GetCreateCompanyServicesError> {
         service::Entity::find()
             .all(&self.db)
             .await
             .map(|result| result.into_iter().map(|s| s.into()).collect())
-            .map_err(|_| GetCompanyServicesError::InternalError)
+            .map_err(|_| GetCreateCompanyServicesError::InternalError)
     }
 
     pub async fn update(
@@ -44,7 +64,10 @@ impl CompanyServicesService {
             .exec(&self.db)
             .await
             .map(|_| CompanyServiceIdSerializable { id })
-            .map_err(|_| UpdateRemoveCompanyServiceError::InternalError)
+            .map_err(|err| match err {
+                sea_orm::DbErr::RecordNotFound(_) => UpdateRemoveCompanyServiceError::NotFound,
+                _ => UpdateRemoveCompanyServiceError::InternalError,
+            })
     }
 
     pub async fn delete(
@@ -55,6 +78,9 @@ impl CompanyServicesService {
             .exec(&self.db)
             .await
             .map(|_| CompanyServiceIdSerializable { id })
-            .map_err(|_| UpdateRemoveCompanyServiceError::InternalError)
+            .map_err(|err| match err {
+                sea_orm::DbErr::RecordNotFound(_) => UpdateRemoveCompanyServiceError::NotFound,
+                _ => UpdateRemoveCompanyServiceError::InternalError,
+            })
     }
 }
