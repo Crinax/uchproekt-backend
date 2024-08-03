@@ -9,7 +9,33 @@ use crate::{
     services::product::{ProductService, ProductServiceErr},
 };
 
-use super::dto::CreateUpdateProductsDto;
+use super::dto::{CreateUpdateProductsDto, FieldInProductAddOrUpdate};
+
+pub(super) async fn add_or_update_field_to_product(
+    product_id: Path<u32>,
+    field_id: Path<u32>,
+    data: Json<FieldInProductAddOrUpdate>,
+    service: Data<ProductService>,
+) -> impl Responder {
+    if data.validate().is_err() {
+        return ApiError::invalid_data();
+    }
+
+    let result = service
+        .add_or_update_field_to_product(product_id.into_inner(), field_id.into_inner(), &data.value)
+        .await
+        .map_err(|err| match err {
+            ProductServiceErr::NotFound => ApiError::not_found(),
+            _ => ApiError::internal_error(),
+        })
+        .map(|result| HttpResponse::Ok().json(result));
+
+    if result.is_err() {
+        return result.unwrap_err();
+    } else {
+        return result.unwrap();
+    }
+}
 
 pub(super) async fn update_product(
     id: Path<u32>,

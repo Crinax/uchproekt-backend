@@ -24,6 +24,12 @@ pub(super) fn configure(config: Data<Config>) -> impl Fn(&mut web::ServiceConfig
                     .wrap(JwtAuth::new(config.clone()))
                     .delete(delete_products::delete_products)
                     .patch(update_product::update_product),
+            )
+            .service(
+                web::resource("{product_id}/fields/{field_id}")
+                    .wrap(JwtAuth::new(config.clone()))
+                    .patch(update_product::add_or_update_field_to_product)
+                    .delete(delete_products::delete_field_from_product),
             );
     }
 }

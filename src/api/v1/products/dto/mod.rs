@@ -11,6 +11,13 @@ pub struct DeleteProductsDto {
 #[derive(Deserialize, Validate, Debug, Clone)]
 pub struct FieldInProductDto {
     pub id: u32,
+    #[validate(length(min = 1))]
+    pub value: String,
+}
+
+#[derive(Deserialize, Validate, Debug, Clone)]
+pub struct FieldInProductAddOrUpdate {
+    #[validate(length(min = 1))]
     pub value: String,
 }
 
