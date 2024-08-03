@@ -142,18 +142,18 @@ impl ProductService {
     pub async fn update(
         &self,
         id: u32,
-        name: String,
+        name: &str,
         price: Decimal,
-        article: String,
-        description: String,
+        article: &str,
+        description: &str,
         photo: Option<Uuid>,
     ) -> Result<ProductInsertionUpdate, ProductServiceErr> {
         let model = product::ActiveModel {
             id: Set(id as i32),
-            name: Set(name),
+            name: Set(name.to_owned()),
             price: Set(price),
-            article: Set(article),
-            description: Set(description),
+            article: Set(article.to_owned()),
+            description: Set(description.to_owned()),
             photo: Set(photo),
             ..Default::default()
         };

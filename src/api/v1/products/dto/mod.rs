@@ -15,7 +15,7 @@ pub struct FieldInProductDto {
 }
 
 #[derive(Deserialize, Validate, Debug, Clone)]
-pub struct CreateProductsDto {
+pub struct CreateUpdateProductsDto {
     #[validate(length(min = 3))]
     pub name: String,
 

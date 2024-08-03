@@ -2,6 +2,7 @@ mod create_product;
 mod delete_products;
 mod dto;
 mod get_products;
+mod update_product;
 
 pub use dto::FieldInProductDto;
 
@@ -21,7 +22,8 @@ pub(super) fn configure(config: Data<Config>) -> impl Fn(&mut web::ServiceConfig
             .service(
                 web::resource("{id}")
                     .wrap(JwtAuth::new(config.clone()))
-                    .delete(delete_products::delete_products),
+                    .delete(delete_products::delete_products)
+                    .patch(update_product::update_product),
             );
     }
 }
