@@ -11,7 +11,11 @@ use crate::{api::middlewares::authenticate::JwtAuth, config::Config};
 pub(super) fn configure(config: Data<Config>) -> impl Fn(&mut web::ServiceConfig) {
     move |cfg| {
         cfg.service(get_company_services::get_company_services)
-            .service(web::resource("").post(create_company_services::create_service))
+            .service(
+                web::resource("")
+                    .wrap(JwtAuth::new(config.clone()))
+                    .post(create_company_services::create_service),
+            )
             .service(
                 web::resource("{id}")
                     .wrap(JwtAuth::new(config.clone()))
