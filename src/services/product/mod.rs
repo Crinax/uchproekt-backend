@@ -1,18 +1,16 @@
-use migration::InsertStatement;
 use migration::OnConflict;
 use rust_decimal::Decimal;
-use sea_orm::{
-    ColumnTrait, ConnectionTrait, DatabaseConnection, EntityTrait, QueryFilter, Set,
-    TransactionTrait,
-};
+use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, JoinType, QueryFilter, QuerySelect, RelationTrait, Set, TransactionTrait};
 
-use entity::field;
-use entity::field_product;
+use entity::{field, field_product};
 use entity::product::{self, Entity as Product};
 use serde::Serialize;
 use uuid::Uuid;
 
 use crate::api::FieldInProductDto;
+use crate::utilities::seaorm_utils::Prefixer;
+
+use super::field::field_type::FieldType;
 
 pub struct ProductService {
     db: DatabaseConnection,
@@ -32,6 +30,7 @@ pub struct ProductSerializable {
     article: String,
     description: String,
     photo: Option<Uuid>,
+    fields: Vec<FieldInProduct>,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -84,6 +83,21 @@ pub struct ProductAddFieldUpdate {
     value: String,
 }
 
+#[derive(Clone, Debug, Serialize)]
+pub struct FieldInProduct {
+    id: u32,
+    r#type: FieldType,
+    value: String,
+}
+
+#[derive(Clone, Debug, Serialize)]
+pub struct FieldWithValue {
+    id: u32,
+    r#type: FieldType,
+    value: String,
+    product_id: u32,
+}
+
 impl From<&[u32]> for ProductIdx {
     fn from(value: &[u32]) -> Self {
         ProductIdx {
@@ -109,6 +123,7 @@ impl From<product::Model> for ProductSerializable {
             article: model.article,
             description: model.description,
             photo: model.photo,
+            fields: Vec::new(),
         }
     }
 }
@@ -122,6 +137,7 @@ impl From<&product::Model> for ProductSerializable {
             article: model.article.to_owned(),
             description: model.description.to_owned(),
             photo: model.photo,
+            fields: Vec::new(),
         }
     }
 }
@@ -132,6 +148,17 @@ impl ProductService {
     }
 
     pub async fn all(&self) -> Result<Vec<ProductSerializable>, ProductServiceErr> {
+        let selector = Product::find()
+            .join(JoinType::LeftJoin, field::Relation::FieldProduct.def())
+            .join(JoinType::LeftJoin, field_product::Relation::Product.def());
+
+        let result = Prefixer::new(selector)
+            .add_columns(field::Entity)
+            .add_columns(field_product::Entity)
+            .add_columns(product::Entity)
+            .selector
+            .
+
         Product::find()
             .all(&self.db)
             .await
