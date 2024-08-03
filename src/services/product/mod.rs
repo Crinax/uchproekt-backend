@@ -73,8 +73,15 @@ pub struct ProductIdx {
 }
 
 #[derive(Clone, Debug, Serialize)]
-pub struct ProductInsertion {
+pub struct ProductInsertionUpdate {
     id: u32,
+}
+
+#[derive(Clone, Debug, Serialize)]
+pub struct ProductAddFieldUpdate {
+    product_id: u32,
+    field_id: u32,
+    value: String,
 }
 
 impl From<&[u32]> for ProductIdx {
@@ -132,6 +139,85 @@ impl ProductService {
             .map_err(|_| ProductServiceErr::Internal)
     }
 
+    pub async fn update(
+        &self,
+        id: u32,
+        name: String,
+        price: Decimal,
+        article: String,
+        description: String,
+        photo: Option<Uuid>,
+    ) -> Result<ProductInsertionUpdate, ProductServiceErr> {
+        let model = product::ActiveModel {
+            id: Set(id as i32),
+            name: Set(name),
+            price: Set(price),
+            article: Set(article),
+            description: Set(description),
+            photo: Set(photo),
+            ..Default::default()
+        };
+
+        Product::update(model)
+            .exec(&self.db)
+            .await
+            .map_err(|err| match err {
+                sea_orm::DbErr::RecordNotFound(_) => ProductServiceErr::NotFound,
+                _ => ProductServiceErr::Internal,
+            })
+            .map(|_| ProductInsertionUpdate { id })
+    }
+
+    pub async fn remove_field_from_product(
+        &self,
+        product_id: u32,
+        field_id: u32,
+    ) -> Result<(), ProductServiceErr> {
+        field_product::Entity::delete(field_product::ActiveModel {
+            product_id: Set(product_id as i32),
+            field_id: Set(field_id as i32),
+            ..Default::default()
+        })
+        .exec(&self.db)
+        .await
+        .map_err(|err| match err {
+            sea_orm::DbErr::RecordNotFound(_) => ProductServiceErr::NotFound,
+            _ => ProductServiceErr::Internal,
+        })?;
+
+        Ok(())
+    }
+
+    pub async fn add_or_update_field_to_product(
+        &self,
+        product_id: u32,
+        field_id: u32,
+        value: &str,
+    ) -> Result<ProductAddFieldUpdate, ProductServiceErr> {
+        let model = field_product::ActiveModel {
+            product_id: Set(product_id as i32),
+            field_id: Set(field_id as i32),
+            value: Set(value.to_owned()),
+        };
+        field_product::Entity::insert(model)
+            .on_conflict(
+                OnConflict::columns([
+                    field_product::Column::ProductId,
+                    field_product::Column::FieldId,
+                ])
+                .update_column(field_product::Column::Value)
+                .to_owned(),
+            )
+            .exec(&self.db)
+            .await
+            .map_err(|_| ProductServiceErr::Internal)
+            .map(|_| ProductAddFieldUpdate {
+                product_id,
+                field_id,
+                value: value.to_owned(),
+            })
+    }
+
     pub async fn create(
         &self,
         name: String,
@@ -140,7 +226,7 @@ impl ProductService {
         description: String,
         photo: Option<Uuid>,
         fields: Vec<FieldInProductDto>,
-    ) -> Result<ProductInsertion, ProductServiceErr> {
+    ) -> Result<ProductInsertionUpdate, ProductServiceErr> {
         let transaction = self
             .db
             .begin()
@@ -157,7 +243,7 @@ impl ProductService {
         })
         .exec(&transaction)
         .await
-        .map(|result| ProductInsertion {
+        .map(|result| ProductInsertionUpdate {
             id: result.last_insert_id as u32,
         })
         .map_err(|_| ProductServiceErr::Internal)?;
