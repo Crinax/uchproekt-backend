@@ -35,6 +35,14 @@ impl FieldService {
             })
     }
 
+    pub async fn get_all(&self) -> Result<Vec<FieldSerializable>, FieldGetError> {
+        Field::find()
+            .all(&self.db)
+            .await
+            .map_err(|_| FieldGetError::Unknown)
+            .map(|result| result.into_iter().map(FieldSerializable::from).collect())
+    }
+
     pub async fn get(&self, id: i32) -> Result<FieldSerializable, FieldGetError> {
         Field::find_by_id(id)
             .one(&self.db)
