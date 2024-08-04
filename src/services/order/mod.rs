@@ -3,6 +3,7 @@ use std::collections::{hash_map::Entry, HashMap, HashSet};
 use entity::order::{self, Entity as Order};
 use entity::product::{self, Entity as Product};
 use entity::products_in_order::{self, Entity as ProductsInOrder};
+use entity::{field, field_product};
 use sea_orm::{
     ColumnTrait, DatabaseConnection, DbErr, EntityTrait, FromQueryResult, JoinType, QueryFilter,
     QuerySelect, RelationTrait, Set, TransactionTrait,
@@ -13,6 +14,8 @@ use crate::{
     services::product::{ProductWithQuantityModel, ProductWithQuantitySerializable},
     utilities::seaorm_utils::{parse_query_to_model, Prefixer},
 };
+
+use super::product::{FieldWithValue, ProductSerializable, ProductWithQuantityWithFieldModel};
 
 #[derive(Clone, Debug)]
 pub enum OrderInsertionErr {
@@ -57,7 +60,7 @@ struct OrderWithProductsModel {
     pub surname: String,
     pub phone: String,
     pub address: String,
-    pub product: ProductWithQuantityModel,
+    pub product: ProductWithQuantityWithFieldModel,
 }
 
 impl FromQueryResult for OrderWithProductsModel {
@@ -66,6 +69,24 @@ impl FromQueryResult for OrderWithProductsModel {
         let products_in_order =
             parse_query_to_model::<products_in_order::Model, ProductsInOrder>(res)?;
         let product = parse_query_to_model::<product::Model, Product>(res)?;
+        let field_product =
+            parse_query_to_model::<field_product::Model, field_product::Entity>(res).ok();
+        let field = parse_query_to_model::<field::Model, field::Entity>(res).ok();
+
+        let field_with_value = if let Some(field_product) = field_product {
+            if let Some(field) = field {
+                Some(FieldWithValue {
+                    id: field.id as u32,
+                    r#type: field.r#type.into(),
+                    value: field_product.value,
+                    product_id: field_product.product_id as u32,
+                })
+            } else {
+                None
+            }
+        } else {
+            None
+        };
 
         Ok(OrderWithProductsModel {
             id: order.id,
@@ -73,7 +94,7 @@ impl FromQueryResult for OrderWithProductsModel {
             surname: order.surname,
             phone: order.phone,
             address: order.address,
-            product: ProductWithQuantityModel {
+            product: ProductWithQuantityWithFieldModel {
                 id: product.id,
                 name: product.name,
                 price: product.price,
@@ -81,6 +102,7 @@ impl FromQueryResult for OrderWithProductsModel {
                 description: product.description,
                 photo: product.photo,
                 quantity: products_in_order.quantity,
+                field: field_with_value,
             },
         })
     }
@@ -91,18 +113,62 @@ impl OrderService {
         Self { db }
     }
 
+    fn products_with_field_to_serializable(
+        products: Vec<ProductWithQuantityWithFieldModel>,
+    ) -> Vec<ProductWithQuantitySerializable> {
+        let mut product_index_map: HashMap<u32, usize> = HashMap::new();
+        let mut result: Vec<ProductWithQuantitySerializable> = Vec::new();
+
+        for (index, product) in products.iter().enumerate() {
+            let product_id = product.id as u32;
+
+            if let Entry::Vacant(e) = product_index_map.entry(product_id) {
+                result.push(ProductWithQuantitySerializable {
+                    product: ProductSerializable {
+                        id: product.id,
+                        name: product.name.to_owned(),
+                        price: product.price.to_owned(),
+                        article: product.article.to_owned(),
+                        description: product.description.to_owned(),
+                        photo: product.photo,
+                        fields: Vec::new(),
+                    },
+                    quantity: product.quantity as u32,
+                });
+
+                e.insert(index);
+
+                if let Some(field) = &product.field {
+                    result[index].product.fields.push(field.clone().into());
+                }
+            } else {
+                let key = product_index_map.get(&(product.id as u32)).unwrap();
+
+                if let Some(field) = &product.field {
+                    result[*key].product.fields.push(field.clone().into());
+                }
+            }
+        }
+
+        return result;
+    }
+
     pub async fn get_all(&self) -> Result<Vec<OrderSerializable>, OrderGetError> {
         let select = Order::find()
             .join(JoinType::LeftJoin, order::Relation::ProductsInOrder.def())
             .join(
                 JoinType::LeftJoin,
                 products_in_order::Relation::Product.def(),
-            );
+            )
+            .join(JoinType::LeftJoin, product::Relation::FieldProduct.def())
+            .join(JoinType::LeftJoin, field_product::Relation::Field.def());
 
         let result = Prefixer::new(select)
             .add_columns(Order)
             .add_columns(ProductsInOrder)
             .add_columns(Product)
+            .add_columns(field::Entity)
+            .add_columns(field_product::Entity)
             .selector
             .into_model::<OrderWithProductsModel>()
             .all(&self.db)
@@ -111,6 +177,13 @@ impl OrderService {
 
         let mut order_index_map: HashMap<i32, usize> = HashMap::new();
         let mut response: Vec<OrderSerializable> = Vec::new();
+        let products: Vec<ProductWithQuantityWithFieldModel> =
+            result.iter().map(|order| order.product.clone()).collect();
+        let serializable_products: HashMap<i32, ProductWithQuantitySerializable> =
+            Self::products_with_field_to_serializable(products)
+                .into_iter()
+                .map(|product| (product.product.id, product))
+                .collect();
 
         for (index, order) in result.iter().enumerate() {
             if let Entry::Vacant(e) = order_index_map.entry(order.id) {
@@ -125,10 +198,14 @@ impl OrderService {
 
                 e.insert(index);
 
-                response[index].products.push(order.product.clone().into())
+                response[index]
+                    .products
+                    .push(serializable_products[&order.product.id].clone());
             } else {
                 let key = order_index_map.get(&order.id).unwrap();
-                response[*key].products.push(order.product.clone().into());
+                response[*key]
+                    .products
+                    .push(serializable_products[&order.product.id].clone());
             }
         }
 

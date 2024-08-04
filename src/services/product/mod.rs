@@ -1,14 +1,20 @@
+use std::collections::hash_map::Entry;
+use std::collections::HashMap;
+
 use migration::OnConflict;
 use rust_decimal::Decimal;
-use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, JoinType, QueryFilter, QuerySelect, RelationTrait, Set, TransactionTrait};
+use sea_orm::{
+    ColumnTrait, DatabaseConnection, EntityTrait, FromQueryResult, JoinType, QueryFilter,
+    QuerySelect, RelationTrait, Set, TransactionTrait,
+};
 
-use entity::{field, field_product};
 use entity::product::{self, Entity as Product};
+use entity::{field, field_product};
 use serde::Serialize;
 use uuid::Uuid;
 
 use crate::api::FieldInProductDto;
-use crate::utilities::seaorm_utils::Prefixer;
+use crate::utilities::seaorm_utils::{parse_query_to_model, Prefixer};
 
 use super::field::field_type::FieldType;
 
@@ -24,13 +30,13 @@ pub enum ProductServiceErr {
 
 #[derive(Clone, Debug, Serialize)]
 pub struct ProductSerializable {
-    id: i32,
-    name: String,
-    price: rust_decimal::Decimal,
-    article: String,
-    description: String,
-    photo: Option<Uuid>,
-    fields: Vec<FieldInProduct>,
+    pub id: i32,
+    pub name: String,
+    pub price: rust_decimal::Decimal,
+    pub article: String,
+    pub description: String,
+    pub photo: Option<Uuid>,
+    pub fields: Vec<FieldInProduct>,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -48,6 +54,19 @@ pub struct ProductWithQuantityModel {
     pub description: String,
     pub photo: Option<Uuid>,
     pub quantity: i32,
+    pub fields: Vec<FieldInProduct>,
+}
+
+#[derive(Clone, Debug)]
+pub struct ProductWithQuantityWithFieldModel {
+    pub id: i32,
+    pub name: String,
+    pub price: Decimal,
+    pub article: String,
+    pub description: String,
+    pub photo: Option<Uuid>,
+    pub quantity: i32,
+    pub field: Option<FieldWithValue>,
 }
 
 impl From<ProductWithQuantityModel> for ProductWithQuantitySerializable {
@@ -60,6 +79,7 @@ impl From<ProductWithQuantityModel> for ProductWithQuantitySerializable {
                 article: value.article,
                 description: value.description,
                 photo: value.photo,
+                fields: value.fields,
             },
             quantity: value.quantity as u32,
         }
@@ -92,10 +112,66 @@ pub struct FieldInProduct {
 
 #[derive(Clone, Debug, Serialize)]
 pub struct FieldWithValue {
-    id: u32,
-    r#type: FieldType,
-    value: String,
-    product_id: u32,
+    pub id: u32,
+    pub r#type: FieldType,
+    pub value: String,
+    pub product_id: u32,
+}
+
+impl From<FieldWithValue> for FieldInProduct {
+    fn from(value: FieldWithValue) -> Self {
+        FieldInProduct {
+            id: value.id,
+            r#type: value.r#type,
+            value: value.value,
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct ProductWithField {
+    pub id: i32,
+    pub name: String,
+    pub price: Decimal,
+    pub article: String,
+    pub description: String,
+    pub photo: Option<Uuid>,
+    pub field: Option<FieldWithValue>,
+}
+
+impl FromQueryResult for ProductWithField {
+    fn from_query_result(res: &sea_orm::QueryResult, _pre: &str) -> Result<Self, sea_orm::DbErr> {
+        let product = parse_query_to_model::<product::Model, Product>(res)?;
+        let field_product =
+            parse_query_to_model::<field_product::Model, field_product::Entity>(res).ok();
+
+        let field = parse_query_to_model::<field::Model, field::Entity>(res).ok();
+
+        let field_with_value = if let Some(field_product) = field_product {
+            if let Some(field) = field {
+                Some(FieldWithValue {
+                    id: field.id as u32,
+                    r#type: field.r#type.into(),
+                    value: field_product.value,
+                    product_id: field_product.product_id as u32,
+                })
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+
+        Ok(ProductWithField {
+            id: product.id,
+            name: product.name,
+            price: product.price,
+            article: product.article,
+            description: product.description,
+            photo: product.photo,
+            field: field_with_value,
+        })
+    }
 }
 
 impl From<&[u32]> for ProductIdx {
@@ -147,23 +223,60 @@ impl ProductService {
         Self { db }
     }
 
+    pub fn products_with_field_to_serializable(
+        products: Vec<ProductWithField>,
+    ) -> Vec<ProductSerializable> {
+        let mut product_index_map: HashMap<u32, usize> = HashMap::new();
+        let mut result: Vec<ProductSerializable> = Vec::new();
+
+        for (index, product) in products.iter().enumerate() {
+            let product_id = product.id as u32;
+
+            if let Entry::Vacant(e) = product_index_map.entry(product_id) {
+                result.push(ProductSerializable {
+                    id: product.id,
+                    name: product.name.to_owned(),
+                    price: product.price.to_owned(),
+                    article: product.article.to_owned(),
+                    description: product.description.to_owned(),
+                    photo: product.photo,
+                    fields: Vec::new(),
+                });
+
+                e.insert(index);
+
+                if let Some(field) = &product.field {
+                    result[index].fields.push(field.clone().into());
+                }
+            } else {
+                let key = product_index_map.get(&(product.id as u32)).unwrap();
+                if let Some(field) = &product.field {
+                    result[*key].fields.push(field.clone().into());
+                }
+            }
+        }
+
+        return result;
+    }
+
     pub async fn all(&self) -> Result<Vec<ProductSerializable>, ProductServiceErr> {
         let selector = Product::find()
-            .join(JoinType::LeftJoin, field::Relation::FieldProduct.def())
-            .join(JoinType::LeftJoin, field_product::Relation::Product.def());
+            .join(JoinType::LeftJoin, product::Relation::FieldProduct.def())
+            .join(JoinType::LeftJoin, field_product::Relation::Field.def());
 
-        let result = Prefixer::new(selector)
+        let products = Prefixer::new(selector)
             .add_columns(field::Entity)
             .add_columns(field_product::Entity)
             .add_columns(product::Entity)
             .selector
-            .
-
-        Product::find()
+            .into_model::<ProductWithField>()
             .all(&self.db)
             .await
-            .map(|models| models.into_iter().map(Into::into).collect())
-            .map_err(|_| ProductServiceErr::Internal)
+            .map_err(|_| ProductServiceErr::Internal)?;
+
+        Ok(ProductService::products_with_field_to_serializable(
+            products,
+        ))
     }
 
     pub async fn update(
@@ -301,12 +414,30 @@ impl ProductService {
     }
 
     pub async fn get(&self, id: u32) -> Result<ProductSerializable, ProductServiceErr> {
-        Product::find_by_id(id as i32)
-            .one(&self.db)
+        let selector = Product::find_by_id(id as i32)
+            .join(JoinType::LeftJoin, product::Relation::FieldProduct.def())
+            .join(JoinType::LeftJoin, field_product::Relation::Field.def());
+
+        let product = Prefixer::new(selector)
+            .add_columns(field::Entity)
+            .add_columns(field_product::Entity)
+            .add_columns(product::Entity)
+            .selector
+            .into_model::<ProductWithField>()
+            .all(&self.db)
             .await
-            .map_err(|_| ProductServiceErr::Internal)?
-            .ok_or(ProductServiceErr::NotFound)
-            .map(Into::into)
+            .map_err(|err| {
+                log::error!("{:?}", err);
+                ProductServiceErr::Internal
+            })?;
+
+        if product.len() == 0 {
+            return Err(ProductServiceErr::NotFound);
+        }
+
+        let seriallizable = ProductService::products_with_field_to_serializable(product);
+
+        Ok(seriallizable[0].clone())
     }
 
     pub async fn delete(&self, idx: &[u32]) -> Result<ProductIdx, ProductServiceErr> {
