@@ -4,8 +4,7 @@ use std::collections::HashMap;
 use migration::OnConflict;
 use rust_decimal::Decimal;
 use sea_orm::{
-    ColumnTrait, DatabaseConnection, EntityTrait, FromQueryResult, JoinType, QueryFilter,
-    QuerySelect, RelationTrait, Set, TransactionTrait,
+    ColumnTrait, DatabaseConnection, EntityTrait, FromQueryResult, JoinType, PaginatorTrait, QueryFilter, QuerySelect, RelationTrait, Set, TransactionTrait
 };
 
 use entity::product::{self, Entity as Product};
@@ -219,6 +218,8 @@ impl From<&product::Model> for ProductSerializable {
 }
 
 impl ProductService {
+    const MAX_PRODUCTS_PER_PAGE: u64 = 15;
+
     pub fn new(db: DatabaseConnection) -> Self {
         Self { db }
     }
@@ -259,7 +260,7 @@ impl ProductService {
         return result;
     }
 
-    pub async fn all(&self) -> Result<Vec<ProductSerializable>, ProductServiceErr> {
+    pub async fn all(&self, page: u64) -> Result<Vec<ProductSerializable>, ProductServiceErr> {
         let selector = Product::find()
             .join(JoinType::LeftJoin, product::Relation::FieldProduct.def())
             .join(JoinType::LeftJoin, field_product::Relation::Field.def());
@@ -270,7 +271,8 @@ impl ProductService {
             .add_columns(product::Entity)
             .selector
             .into_model::<ProductWithField>()
-            .all(&self.db)
+            .paginate(&self.db, ProductService::MAX_PRODUCTS_PER_PAGE)
+            .fetch_page(page)
             .await
             .map_err(|_| ProductServiceErr::Internal)?;
 

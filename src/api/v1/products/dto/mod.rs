@@ -37,6 +37,17 @@ pub struct UpdateProductsDto {
 }
 
 #[derive(Deserialize, Validate, Debug, Clone)]
+pub struct PageAsQuery {
+    #[validate(range(min = 1))]
+    #[serde(default = "default_page")]
+    pub page: u64,
+}
+
+pub fn default_page() -> u64 {
+    1
+}
+
+#[derive(Deserialize, Validate, Debug, Clone)]
 pub struct CreateProductsDto {
     #[validate(length(min = 3))]
     pub name: String,
