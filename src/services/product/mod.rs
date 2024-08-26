@@ -1,10 +1,12 @@
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 
-use migration::OnConflict;
+use migration::extension::postgres::PgExpr;
+use migration::{Alias, Expr, OnConflict};
 use rust_decimal::Decimal;
 use sea_orm::{
-    ColumnTrait, DatabaseConnection, EntityTrait, FromQueryResult, JoinType, PaginatorTrait, QueryFilter, QuerySelect, RelationTrait, Set, TransactionTrait
+    ColumnTrait, DatabaseConnection, EntityTrait, FromQueryResult, JoinType, PaginatorTrait,
+    QueryFilter, QuerySelect, RelationTrait, Select, Set, TransactionTrait,
 };
 
 use entity::product::{self, Entity as Product};
@@ -260,16 +262,38 @@ impl ProductService {
         return result;
     }
 
-    pub async fn all(&self, page: u64) -> Result<Vec<ProductSerializable>, ProductServiceErr> {
+    fn products_selector() -> Select<Product> {
         let selector = Product::find()
             .join(JoinType::LeftJoin, product::Relation::FieldProduct.def())
             .join(JoinType::LeftJoin, field_product::Relation::Field.def());
 
-        let products = Prefixer::new(selector)
+        Prefixer::new(selector)
             .add_columns(field::Entity)
             .add_columns(field_product::Entity)
             .add_columns(product::Entity)
             .selector
+    }
+
+    pub async fn search(
+        &self,
+        text: &str,
+        page: u64,
+    ) -> Result<Vec<ProductSerializable>, ProductServiceErr> {
+        let model = ProductService::products_selector()
+            .filter(
+                Expr::custom_keyword(Alias::new("\"product\".\"name\"")).ilike(format!("%{text}%")),
+            )
+            .into_model::<ProductWithField>()
+            .paginate(&self.db, ProductService::MAX_PRODUCTS_PER_PAGE)
+            .fetch_page(page)
+            .await
+            .map_err(|_| ProductServiceErr::Internal)?;
+
+        Ok(ProductService::products_with_field_to_serializable(model))
+    }
+
+    pub async fn all(&self, page: u64) -> Result<Vec<ProductSerializable>, ProductServiceErr> {
+        let products = ProductService::products_selector()
             .into_model::<ProductWithField>()
             .paginate(&self.db, ProductService::MAX_PRODUCTS_PER_PAGE)
             .fetch_page(page)

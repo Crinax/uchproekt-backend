@@ -1,5 +1,5 @@
 use crate::{
-    api::{errors::ApiError, v1::products::dto::PageAsQuery},
+    api::errors::ApiError,
     services::product::{ProductService, ProductServiceErr},
 };
 use actix_web::{
@@ -9,16 +9,25 @@ use actix_web::{
 };
 use validator::Validate;
 
+use super::dto::SearchProductsQuery;
+
 #[get("")]
 pub(super) async fn get_products(
     products_service: Data<ProductService>,
-    query: Query<PageAsQuery>,
+    query: Query<SearchProductsQuery>,
 ) -> impl Responder {
     if query.0.validate().is_err() {
         return ApiError::invalid_data();
     }
 
-    let products = products_service.all(query.page - 1).await;
+    let products = if query.0.query.len() == 0 {
+        products_service.all(query.page - 1).await
+    } else {
+        println!("Search: {}", query.0.query.to_lowercase());
+        products_service
+            .search(&query.0.query.to_lowercase(), query.page - 1)
+            .await
+    };
 
     if products.is_err() {
         return ApiError::internal_error();
