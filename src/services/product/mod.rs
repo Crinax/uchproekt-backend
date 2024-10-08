@@ -414,22 +414,24 @@ impl ProductService {
         })
         .map_err(|_| ProductServiceErr::Internal)?;
 
-        field_product::Entity::insert_many(fields.iter().map(|f| field_product::ActiveModel {
-            product_id: Set(result.id as i32),
-            field_id: Set(f.id as i32),
-            value: Set(f.value.to_owned()),
-        }))
-        .on_conflict(
-            OnConflict::columns([
-                field_product::Column::ProductId,
-                field_product::Column::FieldId,
-            ])
-            .update_column(field_product::Column::Value)
-            .to_owned(),
-        )
-        .exec(&transaction)
-        .await
-        .map_err(|_| ProductServiceErr::Internal)?;
+        if !fields.is_empty() {
+            field_product::Entity::insert_many(fields.iter().map(|f| field_product::ActiveModel {
+                product_id: Set(result.id as i32),
+                field_id: Set(f.id as i32),
+                value: Set(f.value.to_owned()),
+            }))
+            .on_conflict(
+                OnConflict::columns([
+                    field_product::Column::ProductId,
+                    field_product::Column::FieldId,
+                ])
+                .update_column(field_product::Column::Value)
+                .to_owned(),
+            )
+            .exec(&transaction)
+            .await
+            .map_err(|_| ProductServiceErr::Internal)?;
+        }
 
         transaction
             .commit()
