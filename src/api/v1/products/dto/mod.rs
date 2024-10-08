@@ -65,5 +65,7 @@ pub struct CreateProductsDto {
 
     pub photo: Option<Uuid>,
 
+    pub category_id: u32,
+
     pub fields: Vec<FieldInProductDto>,
 }

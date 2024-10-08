@@ -10,7 +10,7 @@ use sea_orm::{
 };
 
 use entity::product::{self, Entity as Product};
-use entity::{field, field_product};
+use entity::{category_product, field, field_product};
 use serde::Serialize;
 use uuid::Uuid;
 
@@ -392,6 +392,7 @@ impl ProductService {
         description: String,
         photo: Option<Uuid>,
         fields: Vec<FieldInProductDto>,
+        category_id: u32,
     ) -> Result<ProductInsertionUpdate, ProductServiceErr> {
         let transaction = self
             .db
@@ -412,6 +413,14 @@ impl ProductService {
         .map(|result| ProductInsertionUpdate {
             id: result.last_insert_id as u32,
         })
+        .map_err(|_| ProductServiceErr::Internal)?;
+
+        category_product::Entity::insert(category_product::ActiveModel {
+            category_id: Set(category_id as i32),
+            product_id: Set(result.id as i32),
+        })
+        .exec(&transaction)
+        .await
         .map_err(|_| ProductServiceErr::Internal)?;
 
         if !fields.is_empty() {
